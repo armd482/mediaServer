@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "dev": "ts-node-dev --respawn src/index.ts",
+    "start": "node dist/index.js",
     "lint": "eslint 'src/**/*.{ts,js}' --fix"
   },
   "devDependencies": {
@@ -29,6 +31,7 @@
   },
   "dependencies": {
     "@stomp/stompjs": "^7.2.1",
+    "@types/stompjs": "^2.3.10",
     "sockjs-client": "^1.6.1",
     "stomp-broker-js": "^1.3.0",
     "wrtc": "^0.4.7",
