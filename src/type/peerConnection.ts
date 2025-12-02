@@ -2,7 +2,7 @@ import { StreamType } from './signal.js';
 
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
 
-interface PeerConnectionInit {
+export interface PeerConnectionInit {
 	userId: string;
 	streamType: StreamType;
 }

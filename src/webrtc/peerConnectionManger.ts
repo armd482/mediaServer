@@ -13,7 +13,7 @@ export const peerConnectionManager = () => {
 	const peerConnection = new Map<string, RTCPeerConnection>();
 	const screenPeerConnection = new Map<string, RTCPeerConnection>();
 
-	const connectPeerConnection = ({ onIcecandidate, onTrack, streamType, userId }: ConnectPeerConnectionProps) => {
+	const connectPeerConnection = async ({ onIcecandidate, onTrack, streamType, userId }: ConnectPeerConnectionProps) => {
 		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(userId) : peerConnection.get(userId);
 
 		if (connection) {
@@ -55,7 +55,7 @@ export const peerConnectionManager = () => {
 		pc.addTrack(track);
 	};
 
-	const registerIce = ({ ice, streamType, userId }: RegisterIceProps) => {
+	const registerIce = async ({ ice, streamType, userId }: RegisterIceProps) => {
 		const pc = getPeerConnection(userId, streamType);
 		pc.addIceCandidate(ice);
 	};
