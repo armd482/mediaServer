@@ -44,8 +44,21 @@ export default [
 
     rules: {
       ...prettierConfig.rules,
-      'prettier/prettier': 'error',
-
+      "prettier/prettier": [
+        "error",
+        {
+          arrowParens: "always",
+          endOfLine: "auto",
+          tabWidth: 2,
+          jsxSingleQuote: true,
+          semi: true,
+          singleQuote: true,
+          bracketSpacing: true,
+          trailingComma: "all",
+          printWidth: 120,
+          useTabs: true
+        }
+      ],
       'unicorn/no-for-loop': 'error',
       'unicorn/no-useless-undefined': 'error',
 

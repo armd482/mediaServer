@@ -1,18 +1,19 @@
-import { Client } from "@stomp/stompjs";
-import SockJs from "sockjs-client";
+import { Client } from '@stomp/stompjs';
+import SockJs from 'sockjs-client';
+import { peerConnectionManager } from '../webrtc/peerConnectionManger.js';
 
 export const initClient = () => {
-  const client = new Client({
-    brokerURL: undefined,
-    debug: (str) => console.log("[STOMP]", str),
-    onConnect: () => {
-      console.log("connected");
-    },
-    webSocketFactory: () =>
-      new SockJs("http://localhost:8080/ws?userId=server"),
-  });
-  console.log("try connecting...");
+  const {} = peerConnectionManager;
+	const client = new Client({
+		brokerURL: undefined,
+		debug: (str) => console.log('[STOMP]', str),
+		onConnect: () => {
+			console.log('connected');
+		},
+		webSocketFactory: () => new SockJs('http://localhost:8080/ws?userId=server'),
+	});
+	console.log('try connecting...');
 
-  client.activate();
-  return client;
+	client.activate();
+	return client;
 };
