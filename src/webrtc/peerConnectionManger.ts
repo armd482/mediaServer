@@ -1,18 +1,20 @@
 import wrtc from 'wrtc';
 
+import {
+	AddTrackProps,
+	ConnectPeerConnectionProps,
+	createSdpProps,
+	RegisterIceProps,
+	RegisterSdpProps,
+} from '../type/peerConnection.js';
 import { StreamType } from '../type/signal.js';
 
 export const peerConnectionManager = () => {
 	const peerConnection = new Map<string, RTCPeerConnection>();
 	const screenPeerConnection = new Map<string, RTCPeerConnection>();
 
-	const connectPeerConnection = (
-		id: string,
-		streamType: StreamType,
-		onIcecandidate?: () => void,
-		onTrack?: () => void,
-	) => {
-		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(id) : peerConnection.get(id);
+	const connectPeerConnection = ({ onIcecandidate, onTrack, streamType, userId }: ConnectPeerConnectionProps) => {
+		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(userId) : peerConnection.get(userId);
 
 		if (connection) {
 			return;
@@ -26,35 +28,40 @@ export const peerConnectionManager = () => {
 		pc.ontrack = onTrack?.();
 
 		if (streamType === 'USER') {
-			peerConnection.set(id, pc);
+			peerConnection.set(userId, pc);
 			return;
 		}
 
-		peerConnection.set(id, pc);
+		peerConnection.set(userId, pc);
 	};
 
-	const registerSdp = async (id: string, streamType: StreamType, sdp: RTCSessionDescriptionInit) => {
-		const pc = getPeerConnection(id, streamType);
+	const registerSdp = async ({ sdp, streamType, userId }: RegisterSdpProps) => {
+		const pc = getPeerConnection(userId, streamType);
 		await pc.setLocalDescription(sdp);
 	};
 
-	const createSdp = async (id: string, streamType: StreamType) => {
-		const pc = getPeerConnection(id, streamType);
+	const createSdp = async ({ streamType, userId }: createSdpProps) => {
+		const pc = getPeerConnection(userId, streamType);
 		const sdp = await pc.createAnswer();
 		return sdp;
 	};
 
-  const addTrack = (id: string, streamType: StreamType, track: MediaStreamTrack, stream?: MediaStream) => {
-    const pc =  getPeerConnection(id, streamType);
-    if(stream) {
-      pc.addTrack(track, stream);
-      return;
-    }
-    pc.addTrack(track);
-  }
+	const addTrack = ({ stream, streamType, track, userId }: AddTrackProps) => {
+		const pc = getPeerConnection(userId, streamType);
+		if (stream) {
+			pc.addTrack(track, stream);
+			return;
+		}
+		pc.addTrack(track);
+	};
 
-	const getPeerConnection = (id: string, streamType: StreamType) => {
-		const pc = streamType === 'SCREEN' ? screenPeerConnection.get(id) : peerConnection.get(id);
+	const registerIce = ({ ice, streamType, userId }: RegisterIceProps) => {
+		const pc = getPeerConnection(userId, streamType);
+		pc.addIceCandidate(ice);
+	};
+
+	const getPeerConnection = (userId: string, streamType: StreamType) => {
+		const pc = streamType === 'SCREEN' ? screenPeerConnection.get(userId) : peerConnection.get(userId);
 
 		if (!pc) {
 			throw new Error('존재하지 않는 peerConnection입니다.');
@@ -62,5 +69,5 @@ export const peerConnectionManager = () => {
 		return pc;
 	};
 
-	return { connectPeerConnection, createSdp, registerSdp, addTrack };
+	return { addTrack, connectPeerConnection, createSdp, registerIce, registerSdp };
 };
