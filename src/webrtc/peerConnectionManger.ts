@@ -30,7 +30,7 @@ export const peerConnectionManager = () => {
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		pc.onicecandidate = async (e: RTCPeerConnectionIceEvent) => {
+		pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
 			if (!e.candidate) {
 				return;
 			}
@@ -42,8 +42,8 @@ export const peerConnectionManager = () => {
 			sendIce(payload);
 		};
 
-		pc.ontrack = (e: RTCTrackEvent) => {
-			const mid = registerTrack(streamType, id, roomId, e.track, pc, ownerId);
+		pc.ontrack = async (e: RTCTrackEvent) => {
+			const mid = await registerTrack(streamType, id, roomId, e.track, pc, ownerId);
 			const payload = {
 				id,
 				mid,
@@ -52,7 +52,7 @@ export const peerConnectionManager = () => {
 		};
 
 		if (streamType === 'USER') {
-			const mid = addParticipantsTracks(pc, roomId);
+			const mid = await addParticipantsTracks(pc, roomId);
 			const payload = {
 				id,
 				mid,
