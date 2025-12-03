@@ -1,3 +1,5 @@
+import { Client } from '@stomp/stompjs';
+
 import { StreamType } from './signal.js';
 
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
@@ -8,6 +10,7 @@ export interface PeerConnectionInit {
 }
 
 export interface ConnectPeerConnectionProps extends PeerConnectionInit {
+	client: Client;
 	roomId: string;
 	ownerId?: string;
 }

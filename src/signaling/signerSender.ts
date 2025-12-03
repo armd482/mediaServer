@@ -1,9 +1,13 @@
 import { Client } from '@stomp/stompjs';
 
-import { AnswerPayloadType, SendAnswerProps } from '../type/signal.js';
+import { AnswerPayloadType, IcePayloadType } from '../type/signal.js';
 
-export const signalSender = () => {
-	const sendSignal = <T>(client: Client, destination: string, payload: T) => {
+interface SignalSenderProps {
+	client: Client;
+}
+
+export const signalSender = ({ client }: SignalSenderProps) => {
+	const sendSignal = <T>(destination: string, payload: T) => {
 		client.publish({
 			body: JSON.stringify(payload),
 			destination,
@@ -13,10 +17,13 @@ export const signalSender = () => {
 		});
 	};
 
-	const sendAnswer = (props: SendAnswerProps) => {
-		const { client, ...response } = props;
-		sendSignal<AnswerPayloadType>(client, '', response);
+	const sendAnswer = (payload: AnswerPayloadType) => {
+		sendSignal('', payload);
 	};
 
-	return { sendAnswer };
+	const sendIce = (payload: IcePayloadType) => {
+		sendSignal('', payload);
+	};
+
+	return { sendAnswer, sendIce };
 };

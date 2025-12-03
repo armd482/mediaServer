@@ -1,5 +1,3 @@
-import { Client } from '@stomp/stompjs';
-
 export type StreamType = 'USER' | 'SCREEN';
 
 interface OfferResponseType {
@@ -17,21 +15,16 @@ export interface ScreenOfferResponseType extends OfferResponseType {
 	ownerId: string;
 }
 
+export interface AnswerPayloadType {
+	userId: string;
+	streamType: StreamType;
+	sdp: string;
+}
+
 export interface IceResponseType {
 	userId: string;
 	streamType: StreamType;
 	ice: string;
 }
 
-export interface SendAnswerProps {
-	userId: string;
-	streamType: StreamType;
-	sdp: string;
-	client: Client;
-}
-
-export interface AnswerPayloadType {
-	userId: string;
-	streamType: StreamType;
-	sdp: string;
-}
+export interface IcePayloadType extends IceResponseType {}

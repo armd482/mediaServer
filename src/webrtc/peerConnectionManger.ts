@@ -1,5 +1,6 @@
 import wrtc from 'wrtc';
 
+import { signalSender } from '../signaling/signerSender.js';
 import {
 	AddTrackProps,
 	ConnectPeerConnectionProps,
@@ -17,7 +18,8 @@ export const peerConnectionManager = () => {
 
 	/* const { addParticipantsTracks, registerTrack } = mediaManager(); */
 
-	const connectPeerConnection = async ({ id, ownerId, roomId, streamType }: ConnectPeerConnectionProps) => {
+	const connectPeerConnection = async ({ client, id, ownerId, roomId, streamType }: ConnectPeerConnectionProps) => {
+		const { sendIce } = signalSender({ client });
 		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(id) : peerConnection.get(id);
 
 		if (connection) {
@@ -28,8 +30,16 @@ export const peerConnectionManager = () => {
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		pc.onicecandidate = () => {
-			//send ice
+		pc.onicecandidate = async (e: RTCPeerConnectionIceEvent) => {
+			if (!e.candidate) {
+				return;
+			}
+			const payload = {
+				ice: JSON.stringify(e.candidate),
+				streamType,
+				userId: id,
+			};
+			sendIce(payload);
 		};
 
 		pc.ontrack = (/* e: RTCTrackEvent */) => {
