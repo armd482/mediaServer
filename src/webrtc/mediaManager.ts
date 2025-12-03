@@ -2,16 +2,16 @@ import { TrackType, ParticipantType, TransceiverMidType } from '../type/media.js
 import { StreamType } from '../type/signal.js';
 
 export const mediaManager = () => {
-	const participants = new Map<string, ParticipantType>(); //roomid - userId[]
-	const userMedia = new Map<string, TrackType>(); // userId - track{}
+	const participants = new Map<string, ParticipantType>(); //roomid - id[]
+	const userMedia = new Map<string, TrackType>(); // id - track{}
 	const screenMedia = new Map<string, TrackType>(); //screenId - track{}
 
 	const addParticipantsTracks = (pc: RTCPeerConnection, roomId: string) => {
-		const midMap = new Map<string, TransceiverMidType>(); //mid - userId
+		const midMap = new Map<string, TransceiverMidType>(); //mid - id
 		const participant = participants.get(roomId);
 
 		if (!participant) {
-			return midMap;
+			return {};
 		}
 
 		participant.USER.forEach((id) => {
@@ -39,7 +39,7 @@ export const mediaManager = () => {
 			midMap.set(audioMid ?? id + 'audio', { id, type: 'SCREEN' });
 			midMap.set(videoMid ?? id + 'video', { id, type: 'SCREEN' });
 		});
-		return midMap;
+		return Object.fromEntries(midMap) as Record<string, TransceiverMidType>;
 	};
 
 	const registerTrack = (
@@ -50,7 +50,7 @@ export const mediaManager = () => {
 		pc: Map<string, RTCPeerConnection>,
 		ownerId?: string,
 	) => {
-		const midUserMap = new Map<string, string>();
+		const midUserMap = new Map<string, TransceiverMidType>();
 		const { audioTrack, videoTrack } = (streamType === 'USER' ? userMedia.get(id) : screenMedia.get(id)) ?? {
 			audioTrack: null,
 			videoTrack: null,
@@ -74,7 +74,7 @@ export const mediaManager = () => {
 			}
 			const transceiver = pc.get(user)?.addTransceiver(track, { direction: 'recvonly' });
 			if (transceiver?.mid) {
-				midUserMap.set(transceiver.mid, id);
+				midUserMap.set(transceiver.mid, { id, type: 'USER' });
 			}
 		});
 
@@ -89,7 +89,7 @@ export const mediaManager = () => {
 			});
 		}
 
-		return midUserMap;
+		return Object.fromEntries(midUserMap) as Record<string, TransceiverMidType>;
 	};
 
 	const addTransceiver = (

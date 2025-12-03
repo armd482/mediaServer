@@ -10,16 +10,16 @@ import {
 } from '../type/peerConnection.js';
 import { StreamType } from '../type/signal.js';
 
-//import { mediaManager } from './mediaManager.js';
+import { mediaManager } from './mediaManager.js';
 
 export const peerConnectionManager = () => {
 	const peerConnection = new Map<string, RTCPeerConnection>();
 	const screenPeerConnection = new Map<string, RTCPeerConnection>();
 
-	/* const { addParticipantsTracks, registerTrack } = mediaManager(); */
+	const { addParticipantsTracks, registerTrack } = mediaManager();
 
 	const connectPeerConnection = async ({ client, id, ownerId, roomId, streamType }: ConnectPeerConnectionProps) => {
-		const { sendIce } = signalSender({ client });
+		const { sendIce, sendMid } = signalSender({ client });
 		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(id) : peerConnection.get(id);
 
 		if (connection) {
@@ -36,26 +36,31 @@ export const peerConnectionManager = () => {
 			}
 			const payload = {
 				ice: JSON.stringify(e.candidate),
+				id,
 				streamType,
-				userId: id,
 			};
 			sendIce(payload);
 		};
 
-		pc.ontrack = (/* e: RTCTrackEvent */) => {
-			console.log(ownerId, roomId);
-			//const mid = registerTrack(streamType, id, roomId, e.track, pc, ownerId);
-			//send mid
+		pc.ontrack = (e: RTCTrackEvent) => {
+			const mid = registerTrack(streamType, id, roomId, e.track, pc, ownerId);
+			const payload = {
+				id,
+				mid,
+			};
+			sendMid(payload);
 		};
 
 		if (streamType === 'USER') {
-			console.log(roomId);
-			//const mid = addParticipantsTracks(pc, roomId);
-			//send mid
+			const mid = addParticipantsTracks(pc, roomId);
+			const payload = {
+				id,
+				mid,
+			};
+			sendMid(payload);
 			peerConnection.set(id, pc);
 			return;
 		}
-
 		peerConnection.set(id, pc);
 	};
 

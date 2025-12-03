@@ -31,7 +31,7 @@ export const subscribeHandler = ({
 	const handleOffer = async (client: Client, message: IMessage) => {
 		const { sendAnswer } = signalSender({ client });
 		const response = parseMessage<ScreenOfferResponseType | UserOfferResponseType>(message);
-		const { roomId, sdp: remoteSdp, streamType, userId } = response;
+		const { id, roomId, sdp: remoteSdp, streamType } = response;
 		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
 		let ownerId: string | undefined;
 		if ('ownerId' in response) {
@@ -39,20 +39,20 @@ export const subscribeHandler = ({
 		}
 		await connectPeerConnection({
 			client,
-			id: userId,
+			id,
 			ownerId,
 			roomId,
 			streamType,
 		});
-		await registerSdp({ id: userId, sdp: parsedRemoteSdp, streamType });
-		const sdp = JSON.stringify(await createSdp({ id: userId, streamType }));
-		sendAnswer({ sdp, streamType, userId });
+		await registerSdp({ id, sdp: parsedRemoteSdp, streamType });
+		const sdp = JSON.stringify(await createSdp({ id, streamType }));
+		sendAnswer({ id, sdp, streamType });
 	};
 
 	const handleIce = async (message: IMessage) => {
-		const { ice, streamType, userId } = parseMessage<IceResponseType>(message);
+		const { ice, id, streamType } = parseMessage<IceResponseType>(message);
 		const parsedIce = JSON.parse(ice) as RTCIceCandidateInit;
-		await registerIce({ ice: parsedIce, id: userId, streamType });
+		await registerIce({ ice: parsedIce, id, streamType });
 	};
 
 	return {

@@ -1,7 +1,9 @@
+import { TransceiverMidType } from './media.js';
+
 export type StreamType = 'USER' | 'SCREEN';
 
 interface OfferResponseType {
-	userId: string;
+	id: string;
 	sdp: string;
 	roomId: string;
 }
@@ -16,15 +18,20 @@ export interface ScreenOfferResponseType extends OfferResponseType {
 }
 
 export interface AnswerPayloadType {
-	userId: string;
+	id: string;
 	streamType: StreamType;
 	sdp: string;
 }
 
 export interface IceResponseType {
-	userId: string;
+	id: string;
 	streamType: StreamType;
 	ice: string;
 }
 
 export interface IcePayloadType extends IceResponseType {}
+
+export interface MidPayloadType {
+	id: string;
+	mid: Record<string, TransceiverMidType>;
+}
