@@ -1,12 +1,11 @@
 import { Client } from '@stomp/stompjs';
 
-import { PeerConnectionInit } from './peerConnection.js';
-
 export type StreamType = 'USER' | 'SCREEN';
 
 interface OfferResponseType {
 	userId: string;
 	sdp: string;
+	roomId: string;
 }
 
 export interface UserOfferResponseType extends OfferResponseType {
@@ -24,7 +23,9 @@ export interface IceResponseType {
 	ice: string;
 }
 
-export interface SendAnswerProps extends PeerConnectionInit {
+export interface SendAnswerProps {
+	userId: string;
+	streamType: StreamType;
 	sdp: string;
 	client: Client;
 }

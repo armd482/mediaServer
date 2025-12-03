@@ -4,10 +4,7 @@ import SockJs from 'sockjs-client';
 import { signalSubscriber } from './signalSubscriber.js';
 
 export const initClient = () => {
-	const onTrack = () => {};
-	const onIcecandidate = () => {};
-
-	const { subscribeIce, subscribeOffer } = signalSubscriber({ onIcecandidate, onTrack });
+	const { subscribeIce, subscribeOffer } = signalSubscriber();
 	const subscription = new Map<string, StompSubscription>();
 
 	const client = new Client({

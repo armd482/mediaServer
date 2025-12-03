@@ -4,18 +4,11 @@ import { peerConnectionManager } from '../webrtc/peerConnectionManger.js';
 
 import { subscribeHandler } from './subscriptionHandler.js';
 
-interface SignalSubscriberProps {
-	onTrack: () => void;
-	onIcecandidate: () => void;
-}
-
-export const signalSubscriber = ({ onIcecandidate, onTrack }: SignalSubscriberProps) => {
+export const signalSubscriber = () => {
 	const { connectPeerConnection, createSdp, registerIce, registerSdp } = peerConnectionManager();
 	const { handleIce, handleOffer } = subscribeHandler({
 		connectPeerConnection,
 		createSdp,
-		onIcecandidate,
-		onTrack,
 		registerIce,
 		registerSdp,
 	});

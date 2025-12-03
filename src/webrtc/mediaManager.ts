@@ -1,0 +1,118 @@
+import { TrackType, ParticipantType, TransceiverMidType } from '../type/media.js';
+import { StreamType } from '../type/signal.js';
+
+export const mediaManager = () => {
+	const participants = new Map<string, ParticipantType>(); //roomid - userId[]
+	const userMedia = new Map<string, TrackType>(); // userId - track{}
+	const screenMedia = new Map<string, TrackType>(); //screenId - track{}
+
+	const addParticipantsTracks = (pc: RTCPeerConnection, roomId: string) => {
+		const midMap = new Map<string, TransceiverMidType>(); //mid - userId
+		const participant = participants.get(roomId);
+
+		if (!participant) {
+			return midMap;
+		}
+
+		participant.USER.forEach((id) => {
+			const media = userMedia.get(id);
+			if (!media) {
+				return;
+			}
+			const { audioTrack, videoTrack } = media;
+			const { audioMid, videoMid } = addTransceiver(pc, audioTrack, videoTrack);
+
+			midMap.set(audioMid ?? id + 'audio', { id, type: 'USER' });
+			midMap.set(videoMid ?? id + 'video', { id, type: 'USER' });
+		});
+
+		participant.SCREEN.forEach((id) => {
+			const media = screenMedia.get(id);
+
+			if (!media) {
+				return;
+			}
+
+			const { audioTrack, videoTrack } = media;
+			const { audioMid, videoMid } = addTransceiver(pc, audioTrack, videoTrack);
+
+			midMap.set(audioMid ?? id + 'audio', { id, type: 'SCREEN' });
+			midMap.set(videoMid ?? id + 'video', { id, type: 'SCREEN' });
+		});
+		return midMap;
+	};
+
+	const registerTrack = (
+		streamType: StreamType,
+		id: string,
+		roomId: string,
+		track: MediaStreamTrack,
+		pc: Map<string, RTCPeerConnection>,
+		ownerId?: string,
+	) => {
+		const midUserMap = new Map<string, string>();
+		const { audioTrack, videoTrack } = (streamType === 'USER' ? userMedia.get(id) : screenMedia.get(id)) ?? {
+			audioTrack: null,
+			videoTrack: null,
+		};
+
+		if (streamType === 'USER') {
+			userMedia.set(id, {
+				audioTrack: track.kind === 'audio' ? track : audioTrack,
+				videoTrack: track.kind === 'video' ? track : videoTrack,
+			});
+		} else {
+			screenMedia.set(id, {
+				audioTrack: track.kind === 'audio' ? track : audioTrack,
+				videoTrack: track.kind === 'video' ? track : videoTrack,
+			});
+		}
+
+		participants.get(roomId)?.USER.forEach((user) => {
+			if (user === ownerId) {
+				return;
+			}
+			const transceiver = pc.get(user)?.addTransceiver(track, { direction: 'recvonly' });
+			if (transceiver?.mid) {
+				midUserMap.set(transceiver.mid, id);
+			}
+		});
+
+		const participant = participants.get(roomId);
+
+		if (participant) {
+			participant[streamType].add(id);
+		} else {
+			participants.set(roomId, {
+				SCREEN: streamType === 'SCREEN' ? new Set([id]) : new Set(),
+				USER: streamType === 'USER' ? new Set([id]) : new Set(),
+			});
+		}
+
+		return midUserMap;
+	};
+
+	const addTransceiver = (
+		pc: RTCPeerConnection,
+		audioTrack: MediaStreamTrack | null,
+		videoTrack: MediaStreamTrack | null,
+	) => {
+		const audioTransceiver = pc.addTransceiver('audio', { direction: 'recvonly' });
+		const videoTransceiver = pc.addTransceiver('video', { direction: 'recvonly' });
+
+		if (audioTrack) {
+			audioTransceiver.sender.replaceTrack(audioTrack);
+		}
+
+		if (videoTrack) {
+			videoTransceiver.sender.replaceTrack(videoTrack);
+		}
+
+		return { audioMid: audioTransceiver.mid, videoMid: videoTransceiver.mid };
+	};
+
+	return {
+		addParticipantsTracks,
+		registerTrack,
+	};
+};

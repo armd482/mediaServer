@@ -9,12 +9,16 @@ import {
 } from '../type/peerConnection.js';
 import { StreamType } from '../type/signal.js';
 
+//import { mediaManager } from './mediaManager.js';
+
 export const peerConnectionManager = () => {
 	const peerConnection = new Map<string, RTCPeerConnection>();
 	const screenPeerConnection = new Map<string, RTCPeerConnection>();
 
-	const connectPeerConnection = async ({ onIcecandidate, onTrack, streamType, userId }: ConnectPeerConnectionProps) => {
-		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(userId) : peerConnection.get(userId);
+	/* const { addParticipantsTracks, registerTrack } = mediaManager(); */
+
+	const connectPeerConnection = async ({ id, ownerId, roomId, streamType }: ConnectPeerConnectionProps) => {
+		const connection = streamType === 'SCREEN' ? screenPeerConnection.get(id) : peerConnection.get(id);
 
 		if (connection) {
 			return;
@@ -24,30 +28,40 @@ export const peerConnectionManager = () => {
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		pc.onicecandidate = onIcecandidate?.();
-		pc.ontrack = onTrack?.();
+		pc.onicecandidate = () => {
+			//send ice
+		};
+
+		pc.ontrack = (/* e: RTCTrackEvent */) => {
+			console.log(ownerId, roomId);
+			//const mid = registerTrack(streamType, id, roomId, e.track, pc, ownerId);
+			//send mid
+		};
 
 		if (streamType === 'USER') {
-			peerConnection.set(userId, pc);
+			console.log(roomId);
+			//const mid = addParticipantsTracks(pc, roomId);
+			//send mid
+			peerConnection.set(id, pc);
 			return;
 		}
 
-		peerConnection.set(userId, pc);
+		peerConnection.set(id, pc);
 	};
 
-	const registerSdp = async ({ sdp, streamType, userId }: RegisterSdpProps) => {
-		const pc = getPeerConnection(userId, streamType);
+	const registerSdp = async ({ id, sdp, streamType }: RegisterSdpProps) => {
+		const pc = getPeerConnection(id, streamType);
 		await pc.setLocalDescription(sdp);
 	};
 
-	const createSdp = async ({ streamType, userId }: createSdpProps) => {
-		const pc = getPeerConnection(userId, streamType);
+	const createSdp = async ({ id, streamType }: createSdpProps) => {
+		const pc = getPeerConnection(id, streamType);
 		const sdp = await pc.createAnswer();
 		return sdp;
 	};
 
-	const addTrack = ({ stream, streamType, track, userId }: AddTrackProps) => {
-		const pc = getPeerConnection(userId, streamType);
+	const addTrack = ({ id, stream, streamType, track }: AddTrackProps) => {
+		const pc = getPeerConnection(id, streamType);
 		if (stream) {
 			pc.addTrack(track, stream);
 			return;
@@ -55,13 +69,13 @@ export const peerConnectionManager = () => {
 		pc.addTrack(track);
 	};
 
-	const registerIce = async ({ ice, streamType, userId }: RegisterIceProps) => {
-		const pc = getPeerConnection(userId, streamType);
+	const registerIce = async ({ ice, id, streamType }: RegisterIceProps) => {
+		const pc = getPeerConnection(id, streamType);
 		pc.addIceCandidate(ice);
 	};
 
-	const getPeerConnection = (userId: string, streamType: StreamType) => {
-		const pc = streamType === 'SCREEN' ? screenPeerConnection.get(userId) : peerConnection.get(userId);
+	const getPeerConnection = (id: string, streamType: StreamType) => {
+		const pc = streamType === 'SCREEN' ? screenPeerConnection.get(id) : peerConnection.get(id);
 
 		if (!pc) {
 			throw new Error('존재하지 않는 peerConnection입니다.');

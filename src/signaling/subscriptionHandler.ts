@@ -15,15 +15,11 @@ interface SignalHandlerProps {
 	createSdp: (props: createSdpProps) => Promise<RTCSessionDescriptionInit>;
 	registerSdp: (props: RegisterSdpProps) => Promise<void>;
 	registerIce: (props: RegisterIceProps) => Promise<void>;
-	onTrack: () => void;
-	onIcecandidate: () => void;
 }
 
 export const subscribeHandler = ({
 	connectPeerConnection,
 	createSdp,
-	onIcecandidate,
-	onTrack,
 	registerIce,
 	registerSdp,
 }: SignalHandlerProps) => {
@@ -35,18 +31,27 @@ export const subscribeHandler = ({
 
 	const handleOffer = async (client: Client, message: IMessage) => {
 		const response = parseMessage<ScreenOfferResponseType | UserOfferResponseType>(message);
-		const { sdp: remoteSdp, streamType, userId } = response;
+		const { roomId, sdp: remoteSdp, streamType, userId } = response;
 		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
-		await connectPeerConnection({ onIcecandidate, onTrack, streamType, userId });
-		await registerSdp({ sdp: parsedRemoteSdp, streamType, userId });
-		const sdp = JSON.stringify(await createSdp({ streamType, userId }));
+		let ownerId: string | undefined;
+		if ('ownerId' in response) {
+			ownerId = response.ownerId;
+		}
+		await connectPeerConnection({
+			id: userId,
+			ownerId,
+			roomId,
+			streamType,
+		});
+		await registerSdp({ id: userId, sdp: parsedRemoteSdp, streamType });
+		const sdp = JSON.stringify(await createSdp({ id: userId, streamType }));
 		sendAnswer({ client, sdp, streamType, userId });
 	};
 
 	const handleIce = async (message: IMessage) => {
 		const { ice, streamType, userId } = parseMessage<IceResponseType>(message);
 		const parsedIce = JSON.parse(ice) as RTCIceCandidateInit;
-		await registerIce({ ice: parsedIce, streamType, userId });
+		await registerIce({ ice: parsedIce, id: userId, streamType });
 	};
 
 	return {

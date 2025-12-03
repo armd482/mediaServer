@@ -3,13 +3,13 @@ import { StreamType } from './signal.js';
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
 
 export interface PeerConnectionInit {
-	userId: string;
+	id: string;
 	streamType: StreamType;
 }
 
 export interface ConnectPeerConnectionProps extends PeerConnectionInit {
-	onIcecandidate?: () => void;
-	onTrack?: () => void;
+	roomId: string;
+	ownerId?: string;
 }
 
 export interface RegisterSdpProps extends PeerConnectionInit {
