@@ -1,126 +1,171 @@
-import { Mutex } from 'async-mutex';
+import { Client } from '@stomp/stompjs';
 
-import { TrackType, ParticipantType, TransceiverMidType } from '../type/media.js';
-import { StreamType } from '../type/signal.js';
-export const mediaManager = () => {
+import { signalSender } from '../signaling/signerSender.js';
+import { TrackType, ParticipantType, TransceiverMidType, TransceiverType, StreamType } from '../type/media.js';
+import { MidPayloadType } from '../type/signal.js';
+
+interface MediaManagerProps {
+	client: Client;
+}
+export const mediaManager = ({ client }: MediaManagerProps) => {
 	const participants = new Map<string, ParticipantType>();
 	const userMedia = new Map<string, TrackType>();
-	const screenMedia = new Map<string, TrackType>();
-	const roomMutex = new Map<string, Mutex>();
+	const userTransceiver = new Map<string, Map<string, TransceiverType>>();
 
-	const getRoomMutex = (roomId: string) => {
-		if (!roomMutex.has(roomId)) {
-			roomMutex.set(roomId, new Mutex());
-		}
-		return roomMutex.get(roomId)!;
-	};
-
-	const getMediaMap = (streamType: StreamType) => {
-		if (streamType === 'USER') {
-			return userMedia;
-		}
-		return screenMedia;
-	};
+	const { sendMid } = signalSender({ client });
 
 	const getParticipant = (roomId: string) => {
 		if (!participants.has(roomId)) {
-			participants.set(roomId, { SCREEN: new Set(), USER: new Set() });
+			participants.set(roomId, new Set());
 		}
 		return participants.get(roomId);
 	};
 
-	const addTransceiver = (
-		pc: RTCPeerConnection,
-		audioTrack: MediaStreamTrack | null,
-		videoTrack: MediaStreamTrack | null,
-	) => {
-		const audioTransceiver = pc.addTransceiver('audio', { direction: 'recvonly' });
-		const videoTransceiver = pc.addTransceiver('video', { direction: 'recvonly' });
-
-		if (audioTrack) {
-			audioTransceiver.sender.replaceTrack(audioTrack);
-		}
-
-		if (videoTrack) {
-			videoTransceiver.sender.replaceTrack(videoTrack);
-		}
-
-		return { audioMid: audioTransceiver.mid, videoMid: videoTransceiver.mid };
+	const setRid = (t: RTCRtpTransceiver, value: string) => {
+		const parameters = t.sender.getParameters();
+		parameters.encodings[0].rid = value;
+		t.sender.setParameters(parameters);
 	};
 
-	const addTrackToPC = (
-		id: string,
-		streamType: StreamType,
-		pc: RTCPeerConnection,
-		midMap: Map<string, TransceiverMidType>,
-	) => {
-		const media = streamType === 'USER' ? userMedia.get(id) : screenMedia.get(id);
+	const addTransceiver = (id: string, pc: RTCPeerConnection, midMap: Map<string, TransceiverMidType>) => {
+		const t: TransceiverType = { audio: null, screenAudio: null, screenVideo: null, video: null };
+
+		const audioTransceiver = pc.addTransceiver('audio', { direction: 'sendonly' });
+		const videoTransceiver = pc.addTransceiver('video', { direction: 'sendonly' });
+		const screenAudioTransceiver = pc.addTransceiver('audio', { direction: 'sendonly' });
+		setRid(screenAudioTransceiver, 'screen-audio');
+		const screenVideoTransceiver = pc.addTransceiver('video', { direction: 'sendonly' });
+		setRid(screenVideoTransceiver, 'screen-video');
+
+		Object.assign(t, { audio: audioTransceiver });
+		Object.assign(t, { video: videoTransceiver });
+		Object.assign(t, { screenAudio: screenAudioTransceiver });
+		Object.assign(t, { screenVideo: screenVideoTransceiver });
+
+		if (audioTransceiver.mid) {
+			midMap.set(audioTransceiver.mid, { id, type: 'USER' });
+		}
+
+		if (videoTransceiver.mid) {
+			midMap.set(videoTransceiver.mid, { id, type: 'USER' });
+		}
+
+		if (screenAudioTransceiver.mid) {
+			midMap.set(screenAudioTransceiver.mid, { id, type: 'SCREEN' });
+		}
+
+		if (screenVideoTransceiver.mid) {
+			midMap.set(screenVideoTransceiver.mid, { id, type: 'SCREEN' });
+		}
+
+		const media = userMedia.get(id);
 		if (!media) {
+			return t;
+		}
+
+		if (media.audioTrack) {
+			audioTransceiver.sender.replaceTrack(media.audioTrack);
+		}
+
+		if (media.videoTrack) {
+			videoTransceiver.sender.replaceTrack(media.videoTrack);
+		}
+
+		if (media.screenAudioTrack) {
+			screenAudioTransceiver.sender.replaceTrack(media.screenAudioTrack);
+		}
+
+		if (media.screenVideoTrack) {
+			screenVideoTransceiver.sender.replaceTrack(media.screenVideoTrack);
+		}
+
+		return t;
+	};
+
+	const prepareSenders = (id: string, pc: RTCPeerConnection, roomId: string) => {
+		const midMap = new Map<string, TransceiverMidType>();
+		const participant = getParticipant(roomId);
+		userTransceiver.set(id, new Map<string, TransceiverType>());
+
+		if (!participant || participant.size === 0) {
 			return;
 		}
 
-		const { audioMid, videoMid } = addTransceiver(pc, media.audioTrack, media.videoTrack);
+		participant.forEach((userId) => {
+			const t = addTransceiver(userId, pc, midMap);
+			userTransceiver.get(id)?.set(userId, t);
+		});
 
-		midMap.set(audioMid ?? id + 'audio', { id, type: streamType });
-		midMap.set(videoMid ?? id + 'video', { id, type: streamType });
+		const payload: MidPayloadType = {
+			id,
+			mid: Object.fromEntries(midMap),
+		};
+
+		sendMid(payload);
 	};
 
-	const addParticipantsTracks = async (pc: RTCPeerConnection, roomId: string) => {
-		const mutex = getRoomMutex(roomId);
-		return mutex.runExclusive(() => {
+	const prepareOtherSenders = (id: string, pc: Map<string, RTCPeerConnection>, roomId: string) => {
+		const participant = getParticipant(roomId);
+
+		if (!participant || participant.size === 0) {
+			return;
+		}
+
+		participant.forEach((userId) => {
 			const midMap = new Map<string, TransceiverMidType>();
-			const participant = getParticipant(roomId);
-			participant?.USER.forEach((id) => {
-				addTrackToPC(id, 'USER', pc, midMap);
-			});
-			participant?.SCREEN.forEach((id) => {
-				addTrackToPC(id, 'SCREEN', pc, midMap);
-			});
-			return Object.fromEntries(midMap) as Record<string, TransceiverMidType>;
-		});
-	};
-	const registerTrack = async (
-		streamType: StreamType,
-		id: string,
-		roomId: string,
-		track: MediaStreamTrack,
-		pc: Map<string, RTCPeerConnection>,
-		ownerId?: string,
-	) => {
-		const mutex = getRoomMutex(roomId);
-		return mutex.runExclusive(() => {
-			const participant = getParticipant(roomId);
-			const midUserMap = new Map<string, TransceiverMidType>();
-			const { audioTrack, videoTrack } = (streamType === 'USER' ? userMedia.get(id) : screenMedia.get(id)) ?? {
-				audioTrack: null,
-				videoTrack: null,
-			};
-			const media = getMediaMap(streamType);
-			media.set(id, {
-				audioTrack: track.kind === 'audio' ? track : audioTrack,
-				videoTrack: track.kind === 'video' ? track : videoTrack,
-			});
-
-			participants.get(roomId)?.USER.forEach((user) => {
-				if (user === ownerId) {
-					return;
-				}
-
-				const transceiver = pc.get(user)?.addTransceiver(track, { direction: 'recvonly' });
-				if (transceiver?.mid) {
-					midUserMap.set(transceiver.mid, { id, type: 'USER' });
-				}
-			});
-			if (participant) {
-				participant[streamType].add(id);
-			} else {
-				participants.set(roomId, {
-					SCREEN: streamType === 'SCREEN' ? new Set([id]) : new Set(),
-					USER: streamType === 'USER' ? new Set([id]) : new Set(),
-				});
+			const peerConnection = pc.get(userId);
+			if (!peerConnection) {
+				return;
 			}
-			return Object.fromEntries(midUserMap) as Record<string, TransceiverMidType>;
+			const transceiver = addTransceiver(id, peerConnection, midMap);
+			userTransceiver.get(userId)?.set(id, transceiver);
+			const payload: MidPayloadType = {
+				id: userId,
+				mid: Object.fromEntries(midMap),
+			};
+			sendMid(payload);
 		});
 	};
-	return { addParticipantsTracks, registerTrack };
+
+	const registerTrack = (id: string, roomId: string, streamType: StreamType, track: MediaStreamTrack) => {
+		const prev = userMedia.get(id) ?? {
+			audioTrack: null,
+			screenAudioTrack: null,
+			screenVideoTrack: null,
+			videoTrack: null,
+		};
+
+		userMedia.set(id, {
+			...prev,
+			[streamType === 'USER'
+				? track.kind === 'audio'
+					? 'audioTrack'
+					: 'videoTrack'
+				: track.kind === 'audio'
+					? 'screenAudioTrack'
+					: 'screenVideoTrack']: track,
+		});
+
+		const participant = getParticipant(roomId);
+		if (!participant) {
+			return;
+		}
+		participant.forEach((userId) => {
+			if (id === userId) {
+				return;
+			}
+			const t = userTransceiver.get(userId)?.get(id);
+			if (!t) {
+				return;
+			}
+
+			if (streamType === 'USER') {
+				track.kind === 'audio' ? t.audio?.sender.replaceTrack(track) : t.video?.sender.replaceTrack(track);
+			} else {
+				track.kind === 'audio' ? t.screenAudio?.sender.replaceTrack(track) : t.screenVideo?.sender.replaceTrack(track);
+			}
+		});
+	};
+
+	return { prepareOtherSenders, prepareSenders, registerTrack };
 };

@@ -1,13 +1,16 @@
-import { StreamType } from './signal.js';
-
-export type ParticipantType = Record<StreamType, Set<string>>;
+export type ParticipantType = Set<string>;
+export type StreamType = 'SCREEN' | 'USER';
 
 export interface TrackType {
 	audioTrack: MediaStreamTrack | null;
 	videoTrack: MediaStreamTrack | null;
+	screenAudioTrack: MediaStreamTrack | null;
+	screenVideoTrack: MediaStreamTrack | null;
 }
 
 export interface TransceiverMidType {
-	type: StreamType;
 	id: string;
+	type: StreamType;
 }
+
+export type TransceiverType = Record<'audio' | 'video' | 'screenAudio' | 'screenVideo', RTCRtpTransceiver | null>;
