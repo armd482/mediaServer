@@ -6,7 +6,7 @@ import {
 	RegisterIceProps,
 	RegisterSdpProps,
 } from '../type/peerConnection.js';
-import { IceResponseType, OfferResponseType } from '../type/signal.js';
+import { IceResponseType, MidResponseType, OfferResponseType } from '../type/signal.js';
 
 import { signalSender } from './signerSender.js';
 
@@ -15,11 +15,15 @@ interface SignalHandlerProps {
 	createSdp: (props: createSdpProps) => Promise<RTCSessionDescriptionInit>;
 	registerSdp: (props: RegisterSdpProps) => Promise<void>;
 	registerIce: (props: RegisterIceProps) => Promise<void>;
+	finalizeMid: (id: string) => void;
+	finalizeOtherMid: (id: string, roomId: string) => void;
 }
 
 export const subscribeHandler = ({
 	connectPeerConnection,
 	createSdp,
+	finalizeMid,
+	finalizeOtherMid,
 	registerIce,
 	registerSdp,
 }: SignalHandlerProps) => {
@@ -34,7 +38,6 @@ export const subscribeHandler = ({
 		const { id, roomId, sdp: remoteSdp } = response;
 		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
 		await connectPeerConnection({
-			client,
 			id,
 			roomId,
 		});
@@ -49,8 +52,15 @@ export const subscribeHandler = ({
 		await registerIce({ ice: parsedIce, id });
 	};
 
+	const handleMid = async (message: IMessage) => {
+		const { id, roomId } = parseMessage<MidResponseType>(message);
+		finalizeMid(id);
+		finalizeOtherMid(id, roomId);
+	};
+
 	return {
 		handleIce,
+		handleMid,
 		handleOffer,
 	};
 };

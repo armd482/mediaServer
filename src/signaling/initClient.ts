@@ -4,18 +4,21 @@ import SockJs from 'sockjs-client';
 import { signalSubscriber } from './signalSubscriber.js';
 
 export const initClient = () => {
-	const { subscribeIce, subscribeOffer } = signalSubscriber();
 	const subscription = new Map<string, StompSubscription>();
 
 	const client = new Client({
 		brokerURL: undefined,
 		debug: (str) => console.log('[STOMP]', str),
 		onConnect: () => {
-			const offerSub = subscribeOffer(client);
+			const { subscribeIce, subscribeMid, subscribeOffer } = signalSubscriber({ client });
+			const offerSub = subscribeOffer();
 			subscription.set('offer', offerSub);
 
-			const iceSub = subscribeIce(client);
+			const iceSub = subscribeIce();
 			subscription.set('ice', iceSub);
+
+			const midSub = subscribeMid();
+			subscription.set('mid', midSub);
 
 			console.log('connected');
 		},

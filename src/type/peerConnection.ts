@@ -1,5 +1,3 @@
-import { Client } from '@stomp/stompjs';
-
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
 
 export interface PeerConnectionInit {
@@ -7,7 +5,6 @@ export interface PeerConnectionInit {
 }
 
 export interface ConnectPeerConnectionProps extends PeerConnectionInit {
-	client: Client;
 	roomId: string;
 }
 

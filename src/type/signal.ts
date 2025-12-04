@@ -22,3 +22,8 @@ export interface MidPayloadType {
 	id: string;
 	mid: Record<string, TransceiverMidType>;
 }
+
+export interface MidResponseType {
+	id: string;
+	roomId: string;
+}

@@ -1,3 +1,4 @@
+import { Client } from '@stomp/stompjs';
 import wrtc from 'wrtc';
 
 import { signalSender } from '../signaling/signerSender.js';
@@ -11,11 +12,17 @@ import {
 
 import { mediaManager } from './mediaManager.js';
 
-export const peerConnectionManager = () => {
-	const peerConnection = new Map<string, RTCPeerConnection>();
+interface PeerConnectionManagerProps {
+	client: Client;
+}
 
-	const connectPeerConnection = async ({ client, id, roomId }: ConnectPeerConnectionProps) => {
-		const { prepareOtherSenders, prepareSenders, registerTrack } = mediaManager({ client });
+export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
+	const peerConnection = new Map<string, RTCPeerConnection>();
+	const { finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack } = mediaManager({
+		client,
+	});
+
+	const connectPeerConnection = async ({ id, roomId }: ConnectPeerConnectionProps) => {
 		const { sendIce } = signalSender({ client });
 		const connection = peerConnection.get(id);
 
@@ -86,5 +93,5 @@ export const peerConnectionManager = () => {
 		return pc;
 	};
 
-	return { addTrack, connectPeerConnection, createSdp, registerIce, registerSdp };
+	return { addTrack, connectPeerConnection, createSdp, finalizeMid, finalizeOtherMid, registerIce, registerSdp };
 };
