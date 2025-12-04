@@ -1,3 +1,4 @@
+import { createMutex } from '../lib/roomMutex.js';
 import { TransceiverType } from '../type/media.js';
 
 import { participantManager } from './participantManager.js';
@@ -10,6 +11,7 @@ export const transceiverManager = (
 	const userTransceiver = new Map<string, Map<string, TransceiverType>>();
 	const { getMedia } = trackManagerInstance;
 	const { getParticipant } = participantManagerInstance;
+	const { runExclusive } = createMutex();
 
 	const getTransceiver = (userId: string) => {
 		const transceiver = userTransceiver.get(userId);
@@ -82,17 +84,19 @@ export const transceiverManager = (
 		return { audio, screenAudio, screenVideo, video } as TransceiverType;
 	};
 
-	const removeTransceiver = (userId: string, roomId: string) => {
-		userTransceiver.get(userId)?.forEach((transceiver) => clearTransceiver(transceiver));
-		userTransceiver.delete(userId);
+	const removeTransceiver = async (userId: string, roomId: string) => {
+		await runExclusive(() => {
+			userTransceiver.get(userId)?.forEach((transceiver) => clearTransceiver(transceiver));
+			userTransceiver.delete(userId);
 
-		getParticipant(roomId)?.forEach((user) => {
-			const transceiver = userTransceiver.get(user)?.get(userId);
-			if (!transceiver) {
-				return;
-			}
-			clearTransceiver(transceiver);
-			userTransceiver.get(user)?.delete(userId);
+			getParticipant(roomId)?.forEach((user) => {
+				const transceiver = userTransceiver.get(user)?.get(userId);
+				if (!transceiver) {
+					return;
+				}
+				clearTransceiver(transceiver);
+				userTransceiver.get(user)?.delete(userId);
+			});
 		});
 	};
 

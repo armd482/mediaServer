@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 
+import { createMutex } from '../lib/roomMutex.js';
 import { signalSender } from '../signaling/signerSender.js';
 import { TransceiverMidType, StreamType } from '../type/media.js';
 import { MidPayloadType } from '../type/signal.js';
@@ -19,6 +20,7 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 	const { createPeerReciever, getTransceiver, removeTransceiver } = transceiverManager(tracks, participants);
 
 	const { sendMid } = signalSender({ client });
+	const { runExclusive } = createMutex();
 
 	const addTransceiver = (id: string, pc: RTCPeerConnection) => {
 		const transceiver = createPeerReciever(pc, id);
@@ -62,38 +64,41 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		});
 	};
 
-	const prepareSenders = (id: string, pc: RTCPeerConnection, roomId: string) => {
+	const prepareSenders = async (id: string, pc: RTCPeerConnection, roomId: string) => {
 		const participant = getParticipant(roomId);
 
 		if (!participant || participant.size === 0) {
 			return;
 		}
 
-		participant.forEach((userId) => {
-			const t = addTransceiver(userId, pc);
-			getTransceiver(id).set(userId, t);
+		await runExclusive(() => {
+			participant.forEach((userId) => {
+				const t = addTransceiver(userId, pc);
+				getTransceiver(id).set(userId, t);
+			});
+			addParticipant(roomId, id);
 		});
-		addParticipant(roomId, id);
 	};
 
-	const prepareOtherSenders = (id: string, pc: Map<string, RTCPeerConnection>, roomId: string) => {
+	const prepareOtherSenders = async (id: string, pc: Map<string, RTCPeerConnection>, roomId: string) => {
 		const participant = getParticipant(roomId);
 
 		if (!participant || participant.size === 0) {
 			return;
 		}
-
-		participant.forEach((userId) => {
-			const peerConnection = pc.get(userId);
-			if (!peerConnection) {
-				return;
-			}
-			const transceiver = addTransceiver(id, peerConnection);
-			getTransceiver(userId).set(id, transceiver);
+		await runExclusive(() => {
+			participant.forEach((userId) => {
+				const peerConnection = pc.get(userId);
+				if (!peerConnection) {
+					return;
+				}
+				const transceiver = addTransceiver(id, peerConnection);
+				getTransceiver(userId).set(id, transceiver);
+			});
 		});
 	};
 
-	const registerTrack = (id: string, roomId: string, streamType: StreamType, track: MediaStreamTrack) => {
+	const registerTrack = async (id: string, roomId: string, streamType: StreamType, track: MediaStreamTrack) => {
 		updateMedia(id, streamType, track);
 
 		const participant = getParticipant(roomId);
