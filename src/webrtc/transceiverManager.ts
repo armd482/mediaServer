@@ -40,25 +40,7 @@ export const transceiverManager = () => {
 		return { audio, screenAudio, screenVideo, video } as TransceiverType;
 	};
 
-	const inactiveTransceiver = (t: RTCRtpTransceiver | null) => {
-		if (!t) return;
-		t.sender.replaceTrack(null);
-		t.sender.track?.stop();
-		t.stop();
-	};
-	const clearTransceiver = (transceiver: TransceiverType | undefined) => {
-		if (!transceiver) {
-			return;
-		}
-		inactiveTransceiver(transceiver.audio);
-		inactiveTransceiver(transceiver.video);
-		inactiveTransceiver(transceiver.screenAudio);
-		inactiveTransceiver(transceiver.screenVideo);
-	};
-
 	const removeTransceiver = async (userId: string, roomId: string) => {
-		const userTransceiver = await getUserPeerTransceiver(userId);
-		userTransceiver.forEach((transceiver) => clearTransceiver(transceiver));
 		await removeUserTransceiver(userId);
 
 		const participant = await getParticipant(roomId);
@@ -74,7 +56,6 @@ export const transceiverManager = () => {
 				if (!t) {
 					return;
 				}
-				clearTransceiver(transceiver.get(userId));
 				await removeUserPeerTransceiver(user, userId);
 			}),
 		);

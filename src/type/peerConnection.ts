@@ -22,3 +22,8 @@ export interface AddTrackProps extends PeerConnectionInit {
 export interface RegisterIceProps extends PeerConnectionInit {
 	ice: RTCIceCandidateInit;
 }
+
+export interface ClosePeerConnectionProps {
+	id: string;
+	roomId: string;
+}

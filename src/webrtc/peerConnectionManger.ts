@@ -2,9 +2,16 @@ import { Client } from '@stomp/stompjs';
 import wrtc from 'wrtc';
 
 import { signalSender } from '../signaling/signerSender.js';
-import { addPeerConnection, getPeerConnection } from '../store/index.js';
+import {
+	addPeerConnection,
+	getPeerConnection,
+	removeParticipant,
+	removePeerConnection,
+	removeUserMedia,
+} from '../store/index.js';
 import {
 	AddTrackProps,
+	ClosePeerConnectionProps,
 	ConnectPeerConnectionProps,
 	createSdpProps,
 	RegisterIceProps,
@@ -18,9 +25,10 @@ interface PeerConnectionManagerProps {
 }
 
 export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
-	const { finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack } = mediaManager({
-		client,
-	});
+	const { finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack, removeTransceiver } =
+		mediaManager({
+			client,
+		});
 
 	const connectPeerConnection = async ({ id, roomId }: ConnectPeerConnectionProps) => {
 		const { sendIce } = signalSender({ client });
@@ -93,5 +101,22 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		pc.addIceCandidate(ice);
 	};
 
-	return { addTrack, connectPeerConnection, createSdp, finalizeMid, finalizeOtherMid, registerIce, registerSdp };
+	const closePeerConnection = async ({ id, roomId }: ClosePeerConnectionProps) => {
+		const pc = await getPeerConnection(id);
+		pc?.close();
+		await removePeerConnection(id);
+		await removeTransceiver(id, roomId);
+		await removeParticipant(roomId, id);
+		await removeUserMedia(id);
+	};
+	return {
+		addTrack,
+		closePeerConnection,
+		connectPeerConnection,
+		createSdp,
+		finalizeMid,
+		finalizeOtherMid,
+		registerIce,
+		registerSdp,
+	};
 };

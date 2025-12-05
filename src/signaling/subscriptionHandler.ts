@@ -2,12 +2,19 @@ import { Client, IMessage } from '@stomp/stompjs';
 
 import { addScreenTrackId } from '../store/index.js';
 import {
+	ClosePeerConnectionProps,
 	ConnectPeerConnectionProps,
 	createSdpProps,
 	RegisterIceProps,
 	RegisterSdpProps,
 } from '../type/peerConnection.js';
-import { IceResponseType, MidResponseType, OfferResponseType, ScreenTrackResponseType } from '../type/signal.js';
+import {
+	IceResponseType,
+	LeaveResponseType,
+	MidResponseType,
+	OfferResponseType,
+	ScreenTrackResponseType,
+} from '../type/signal.js';
 
 import { signalSender } from './signerSender.js';
 
@@ -18,9 +25,11 @@ interface SignalHandlerProps {
 	registerIce: (props: RegisterIceProps) => Promise<void>;
 	finalizeMid: (id: string) => void;
 	finalizeOtherMid: (id: string, roomId: string) => void;
+	closePeerConnection: (props: ClosePeerConnectionProps) => Promise<void>;
 }
 
 export const subscribeHandler = ({
+	closePeerConnection,
 	connectPeerConnection,
 	createSdp,
 	finalizeMid,
@@ -66,7 +75,13 @@ export const subscribeHandler = ({
 		sendScreenTrack({ id, trackId });
 	};
 
+	const handleClosePeerConnection = async (message: IMessage) => {
+		const { id, roomId } = parseMessage<LeaveResponseType>(message);
+		await closePeerConnection({ id, roomId });
+	};
+
 	return {
+		handleClosePeerConnection,
 		handleIce,
 		handleMid,
 		handleOffer,

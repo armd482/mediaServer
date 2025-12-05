@@ -10,7 +10,9 @@ export const initClient = () => {
 		brokerURL: undefined,
 		debug: (str) => console.log('[STOMP]', str),
 		onConnect: () => {
-			const { subscribeIce, subscribeMid, subscribeOffer, subscribeScreenTrack } = signalSubscriber({ client });
+			const { subscribeIce, subscribeLeave, subscribeMid, subscribeOffer, subscribeScreenTrack } = signalSubscriber({
+				client,
+			});
 			const offerSub = subscribeOffer();
 			subscription.set('offer', offerSub);
 
@@ -22,6 +24,9 @@ export const initClient = () => {
 
 			const screenTrackSub = subscribeScreenTrack();
 			subscription.set('screenTrack', screenTrackSub);
+
+			const leaveSub = subscribeLeave();
+			subscription.set('leave', leaveSub);
 
 			console.log('connected');
 		},

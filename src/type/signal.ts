@@ -37,3 +37,8 @@ export interface ScreenTrackPayloadType {
 	id: string;
 	trackId: string;
 }
+
+export interface LeaveResponseType {
+	id: string;
+	roomId: string;
+}

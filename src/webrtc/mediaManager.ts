@@ -7,9 +7,7 @@ import {
 	getPeerConnection,
 	getUserPeerTransceiver,
 	isScreenTrackId,
-	removeParticipant,
 	removeScreenTrackId,
-	removeUserMedia,
 	removeUserTrack,
 	updateUserMedia,
 } from '../store/index.js';
@@ -149,11 +147,5 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		};
 	};
 
-	const closePeer = async (userId: string, roomId: string) => {
-		await removeUserMedia(userId);
-		await removeParticipant(roomId, userId);
-		await removeTransceiver(userId, roomId);
-	};
-
-	return { closePeer, finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack };
+	return { finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack, removeTransceiver };
 };
