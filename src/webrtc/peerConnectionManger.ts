@@ -30,9 +30,9 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			client,
 		});
 
-	const connectPeerConnection = async ({ id, roomId }: ConnectPeerConnectionProps) => {
+	const connectPeerConnection = async ({ roomId, userId }: ConnectPeerConnectionProps) => {
 		const { sendIce } = signalSender({ client });
-		const connection = await getPeerConnection(id);
+		const connection = await getPeerConnection(userId);
 
 		if (connection) {
 			return;
@@ -42,8 +42,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		await prepareSenders(id, pc, roomId);
-		await prepareOtherSenders(id, roomId);
+		await prepareSenders(userId, pc, roomId);
+		await prepareOtherSenders(userId, roomId);
 
 		pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
 			if (!e.candidate) {
@@ -51,29 +51,29 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			}
 			const payload = {
 				ice: JSON.stringify(e.candidate),
-				id,
+				userId,
 			};
 			sendIce(payload);
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			registerTrack(id, roomId, e.track);
+			registerTrack(userId, roomId, e.track);
 		};
 
-		await addPeerConnection(id, pc);
+		await addPeerConnection(userId, pc);
 		return;
 	};
 
-	const registerSdp = async ({ id, sdp }: RegisterSdpProps) => {
-		const pc = await getPeerConnection(id);
+	const registerSdp = async ({ sdp, userId }: RegisterSdpProps) => {
+		const pc = await getPeerConnection(userId);
 		if (!pc) {
 			return;
 		}
 		await pc.setLocalDescription(sdp);
 	};
 
-	const createSdp = async ({ id }: createSdpProps) => {
-		const pc = await getPeerConnection(id);
+	const createSdp = async ({ userId }: createSdpProps) => {
+		const pc = await getPeerConnection(userId);
 		if (!pc) {
 			return;
 		}
@@ -81,8 +81,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		return sdp;
 	};
 
-	const addTrack = async ({ id, stream, track }: AddTrackProps) => {
-		const pc = await getPeerConnection(id);
+	const addTrack = async ({ stream, track, userId }: AddTrackProps) => {
+		const pc = await getPeerConnection(userId);
 		if (!pc) {
 			return;
 		}
@@ -93,8 +93,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		pc.addTrack(track);
 	};
 
-	const registerIce = async ({ ice, id }: RegisterIceProps) => {
-		const pc = await getPeerConnection(id);
+	const registerIce = async ({ ice, userId }: RegisterIceProps) => {
+		const pc = await getPeerConnection(userId);
 		if (!pc) {
 			return;
 		}

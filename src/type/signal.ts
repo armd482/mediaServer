@@ -1,18 +1,18 @@
 import { TransceiverMidType } from './media.js';
 
 export interface OfferResponseType {
-	id: string;
+	userId: string;
 	sdp: string;
 	roomId: string;
 }
 
 export interface AnswerPayloadType {
-	id: string;
+	userId: string;
 	sdp: string;
 }
 
 export interface IceResponseType {
-	id: string;
+	userId: string;
 	ice: string;
 }
 

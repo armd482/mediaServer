@@ -1,7 +1,7 @@
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
 
 export interface PeerConnectionInit {
-	id: string;
+	userId: string;
 }
 
 export interface ConnectPeerConnectionProps extends PeerConnectionInit {

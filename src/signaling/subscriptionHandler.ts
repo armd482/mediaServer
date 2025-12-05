@@ -45,21 +45,21 @@ export const subscribeHandler = ({
 	const handleOffer = async (client: Client, message: IMessage) => {
 		const { sendAnswer } = signalSender({ client });
 		const response = parseMessage<OfferResponseType>(message);
-		const { id, roomId, sdp: remoteSdp } = response;
+		const { roomId, sdp: remoteSdp, userId } = response;
 		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
 		await connectPeerConnection({
-			id,
 			roomId,
+			userId,
 		});
-		await registerSdp({ id, sdp: parsedRemoteSdp });
-		const sdp = JSON.stringify(await createSdp({ id }));
-		sendAnswer({ id, sdp });
+		await registerSdp({ sdp: parsedRemoteSdp, userId });
+		const sdp = JSON.stringify(await createSdp({ userId }));
+		sendAnswer({ sdp, userId });
 	};
 
 	const handleIce = async (message: IMessage) => {
-		const { ice, id } = parseMessage<IceResponseType>(message);
+		const { ice, userId } = parseMessage<IceResponseType>(message);
 		const parsedIce = JSON.parse(ice) as RTCIceCandidateInit;
-		await registerIce({ ice: parsedIce, id });
+		await registerIce({ ice: parsedIce, userId });
 	};
 
 	const handleMid = async (message: IMessage) => {
