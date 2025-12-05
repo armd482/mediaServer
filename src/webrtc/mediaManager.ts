@@ -1,36 +1,38 @@
 import { Client } from '@stomp/stompjs';
 
-import { createMutex } from '../lib/roomMutex.js';
 import { signalSender } from '../signaling/signerSender.js';
+import {
+	addParticipant,
+	getParticipant,
+	getPeerConnection,
+	getUserPeerTransceiver,
+	removeParticipant,
+	removeUserMedia,
+	updateUserMedia,
+} from '../store/index.js';
 import { TransceiverMidType, StreamType } from '../type/media.js';
 import { MidPayloadType } from '../type/signal.js';
 
-import { participantManager } from './participantManager.js';
-import { trackManager } from './trackManager.js';
 import { transceiverManager } from './transceiverManager.js';
 
 interface MediaManagerProps {
 	client: Client;
 }
 export const mediaManager = ({ client }: MediaManagerProps) => {
-	const participants = participantManager();
-	const { addParticipant, getParticipant, removeParticipant } = participants;
-	const tracks = trackManager();
-	const { removeMedia, updateMedia } = tracks;
-	const { createPeerReciever, getTransceiver, removeTransceiver } = transceiverManager(tracks, participants);
+	const { createPeerReciever, removeTransceiver } = transceiverManager();
 
 	const { sendMid } = signalSender({ client });
-	const { runExclusive } = createMutex();
 
 	const addTransceiver = (id: string, pc: RTCPeerConnection) => {
 		const transceiver = createPeerReciever(pc, id);
 		return transceiver;
 	};
 
-	const finalizeMid = (id: string) => {
+	const finalizeMid = async (id: string) => {
 		const midMap = new Map<string, TransceiverMidType>();
+		const transceiver = await getUserPeerTransceiver(id);
 
-		getTransceiver(id).forEach((t, otherUserId) => {
+		transceiver.forEach((t, otherUserId) => {
 			if (t.audio?.mid) midMap.set(t.audio.mid, { id: otherUserId, type: 'USER' });
 			if (t.video?.mid) midMap.set(t.video.mid, { id: otherUserId, type: 'USER' });
 			if (t.screenAudio?.mid) midMap.set(t.screenAudio.mid, { id: otherUserId, type: 'SCREEN' });
@@ -45,92 +47,114 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		sendMid(payload);
 	};
 
-	const finalizeOtherMid = (id: string, roomId: string) => {
-		const participant = getParticipant(roomId);
-		participant?.forEach((userId) => {
-			const midMap = new Map<string, TransceiverMidType>();
-			const transceiver = getTransceiver(userId).get(id);
-			if (transceiver?.audio?.mid) midMap.set(transceiver.audio.mid, { id, type: 'USER' });
-			if (transceiver?.video?.mid) midMap.set(transceiver.video.mid, { id, type: 'USER' });
-			if (transceiver?.screenAudio?.mid) midMap.set(transceiver.screenAudio.mid, { id, type: 'SCREEN' });
-			if (transceiver?.screenVideo?.mid) midMap.set(transceiver.screenVideo.mid, { id, type: 'SCREEN' });
+	const finalizeOtherMid = async (id: string, roomId: string) => {
+		const participant = await getParticipant(roomId);
+		await Promise.all(
+			Array.from(participant).map(async (userId) => {
+				const midMap = new Map<string, TransceiverMidType>();
+				const transceiver = (await getUserPeerTransceiver(userId)).get(id);
+				if (transceiver?.audio?.mid) midMap.set(transceiver.audio.mid, { id, type: 'USER' });
+				if (transceiver?.video?.mid) midMap.set(transceiver.video.mid, { id, type: 'USER' });
+				if (transceiver?.screenAudio?.mid) midMap.set(transceiver.screenAudio.mid, { id, type: 'SCREEN' });
+				if (transceiver?.screenVideo?.mid) midMap.set(transceiver.screenVideo.mid, { id, type: 'SCREEN' });
 
-			const payload: MidPayloadType = {
-				id: userId,
-				mid: Object.fromEntries(midMap),
-			};
+				const payload: MidPayloadType = {
+					id: userId,
+					mid: Object.fromEntries(midMap),
+				};
 
-			sendMid(payload);
-		});
+				sendMid(payload);
+			}),
+		);
 	};
 
 	const prepareSenders = async (id: string, pc: RTCPeerConnection, roomId: string) => {
-		const participant = getParticipant(roomId);
+		const participant = await getParticipant(roomId);
 
 		if (!participant || participant.size === 0) {
 			return;
 		}
 
-		await runExclusive(() => {
-			participant.forEach((userId) => {
-				const t = addTransceiver(userId, pc);
-				getTransceiver(id).set(userId, t);
-			});
-			addParticipant(roomId, id);
-		});
+		await Promise.all(
+			Array.from(participant).map(async (userId) => {
+				const t = await addTransceiver(userId, pc);
+				if (!t) {
+					return;
+				}
+				(await getUserPeerTransceiver(id)).set(userId, t);
+			}),
+		);
+		addParticipant(roomId, id);
 	};
 
-	const prepareOtherSenders = async (id: string, pc: Map<string, RTCPeerConnection>, roomId: string) => {
-		const participant = getParticipant(roomId);
+	const prepareOtherSenders = async (id: string, roomId: string) => {
+		const participant = await getParticipant(roomId);
 
 		if (!participant || participant.size === 0) {
 			return;
 		}
-		await runExclusive(() => {
-			participant.forEach((userId) => {
-				const peerConnection = pc.get(userId);
+
+		await Promise.all(
+			Array.from(participant).map(async (userId) => {
+				const peerConnection = await getPeerConnection(userId);
 				if (!peerConnection) {
 					return;
 				}
-				const transceiver = addTransceiver(id, peerConnection);
-				getTransceiver(userId).set(id, transceiver);
-			});
-		});
+				const transceiver = await addTransceiver(id, peerConnection);
+				if (!transceiver) {
+					return;
+				}
+				(await getUserPeerTransceiver(userId)).set(id, transceiver);
+			}),
+		);
 	};
 
 	const registerTrack = async (id: string, roomId: string, streamType: StreamType, track: MediaStreamTrack) => {
-		updateMedia(id, streamType, track);
+		await updateUserMedia(id, streamType, track);
 
-		const participant = getParticipant(roomId);
+		const participant = await getParticipant(roomId);
 		if (!participant) {
 			return;
 		}
-		participant.forEach((userId) => {
-			if (id === userId) {
-				return;
-			}
-			const t = getTransceiver(userId)?.get(id);
-			if (!t) {
-				return;
-			}
 
-			if (streamType === 'USER') {
-				track.kind === 'audio' ? t.audio?.sender.replaceTrack(track) : t.video?.sender.replaceTrack(track);
-			} else {
-				track.kind === 'audio' ? t.screenAudio?.sender.replaceTrack(track) : t.screenVideo?.sender.replaceTrack(track);
-			}
-		});
+		await Promise.all(
+			Array.from(participant).map(async (userId) => {
+				if (id === userId) {
+					return;
+				}
+				const t = (await getUserPeerTransceiver(userId))?.get(id);
+				if (!t) {
+					return;
+				}
 
-		track.onended = () => {
-			removeMedia(id);
-			removeTransceiver(id, roomId);
+				if (streamType === 'USER') {
+					track.kind === 'audio' ? t.audio?.sender.replaceTrack(track) : t.video?.sender.replaceTrack(track);
+				} else {
+					track.kind === 'audio'
+						? t.screenAudio?.sender.replaceTrack(track)
+						: t.screenVideo?.sender.replaceTrack(track);
+				}
+			}),
+		);
+
+		track.onended = async () => {
+			await removeUserMedia(id);
+			const transceiverMap = await getUserPeerTransceiver(id);
+			transceiverMap.forEach((t) => {
+				try {
+					t.audio?.sender.replaceTrack(null);
+				} catch {}
+				try {
+					t.video?.sender.replaceTrack(null);
+				} catch {}
+			});
 		};
 	};
 
-	const closePeer = (userId: string, roomId: string) => {
-		removeMedia(userId);
-		removeParticipant(roomId, userId);
-		removeTransceiver(userId, roomId);
+	const closePeer = async (userId: string, roomId: string) => {
+		await removeUserMedia(userId);
+		await removeParticipant(roomId, userId);
+		await removeTransceiver(userId, roomId);
 	};
 
 	return { closePeer, finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack };

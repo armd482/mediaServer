@@ -12,7 +12,7 @@ import { signalSender } from './signerSender.js';
 
 interface SignalHandlerProps {
 	connectPeerConnection: (props: ConnectPeerConnectionProps) => Promise<void>;
-	createSdp: (props: createSdpProps) => Promise<RTCSessionDescriptionInit>;
+	createSdp: (props: createSdpProps) => Promise<RTCSessionDescriptionInit | undefined>;
 	registerSdp: (props: RegisterSdpProps) => Promise<void>;
 	registerIce: (props: RegisterIceProps) => Promise<void>;
 	finalizeMid: (id: string) => void;

@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import wrtc from 'wrtc';
 
 import { signalSender } from '../signaling/signerSender.js';
+import { addPeerConnection, getPeerConnection } from '../store/index.js';
 import {
 	AddTrackProps,
 	ConnectPeerConnectionProps,
@@ -17,14 +18,13 @@ interface PeerConnectionManagerProps {
 }
 
 export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
-	const peerConnection = new Map<string, RTCPeerConnection>();
 	const { finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack } = mediaManager({
 		client,
 	});
 
 	const connectPeerConnection = async ({ id, roomId }: ConnectPeerConnectionProps) => {
 		const { sendIce } = signalSender({ client });
-		const connection = peerConnection.get(id);
+		const connection = await getPeerConnection(id);
 
 		if (connection) {
 			return;
@@ -34,8 +34,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		prepareSenders(id, pc, roomId);
-		prepareOtherSenders(id, peerConnection, roomId);
+		await prepareSenders(id, pc, roomId);
+		await prepareOtherSenders(id, roomId);
 
 		pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
 			if (!e.candidate) {
@@ -55,23 +55,32 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			registerTrack(id, roomId, streamType, e.track);
 		};
 
-		peerConnection.set(id, pc);
+		await addPeerConnection(id, pc);
 		return;
 	};
 
 	const registerSdp = async ({ id, sdp }: RegisterSdpProps) => {
-		const pc = getPeerConnection(id);
+		const pc = await getPeerConnection(id);
+		if (!pc) {
+			return;
+		}
 		await pc.setLocalDescription(sdp);
 	};
 
 	const createSdp = async ({ id }: createSdpProps) => {
-		const pc = getPeerConnection(id);
+		const pc = await getPeerConnection(id);
+		if (!pc) {
+			return;
+		}
 		const sdp = await pc.createAnswer();
 		return sdp;
 	};
 
-	const addTrack = ({ id, stream, track }: AddTrackProps) => {
-		const pc = getPeerConnection(id);
+	const addTrack = async ({ id, stream, track }: AddTrackProps) => {
+		const pc = await getPeerConnection(id);
+		if (!pc) {
+			return;
+		}
 		if (stream) {
 			pc.addTrack(track, stream);
 			return;
@@ -80,17 +89,11 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 	};
 
 	const registerIce = async ({ ice, id }: RegisterIceProps) => {
-		const pc = getPeerConnection(id);
-		pc.addIceCandidate(ice);
-	};
-
-	const getPeerConnection = (id: string) => {
-		const pc = peerConnection.get(id);
-
+		const pc = await getPeerConnection(id);
 		if (!pc) {
-			throw new Error('존재하지 않는 peerConnection입니다.');
+			return;
 		}
-		return pc;
+		pc.addIceCandidate(ice);
 	};
 
 	return { addTrack, connectPeerConnection, createSdp, finalizeMid, finalizeOtherMid, registerIce, registerSdp };
