@@ -42,11 +42,9 @@ export const transceiverManager = () => {
 
 	const inactiveTransceiver = (t: RTCRtpTransceiver | null) => {
 		if (!t) return;
-		try {
-			t.direction = 'inactive';
-		} catch (e) {
-			console.warn('failed to set direction inactive', e);
-		}
+		t.sender.replaceTrack(null);
+		t.sender.track?.stop();
+		t.stop();
 	};
 	const clearTransceiver = (transceiver: TransceiverType | undefined) => {
 		if (!transceiver) {

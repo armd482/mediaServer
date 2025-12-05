@@ -10,6 +10,7 @@ import {
 	removeParticipant,
 	removeScreenTrackId,
 	removeUserMedia,
+	removeUserTrack,
 	updateUserMedia,
 } from '../store/index.js';
 import { TransceiverMidType } from '../type/media.js';
@@ -141,16 +142,7 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		);
 
 		track.onended = async () => {
-			await removeUserMedia(id);
-			const transceiverMap = await getUserPeerTransceiver(id);
-			transceiverMap.forEach((t) => {
-				try {
-					t.audio?.sender.replaceTrack(null);
-				} catch {}
-				try {
-					t.video?.sender.replaceTrack(null);
-				} catch {}
-			});
+			removeUserTrack(id, streamType, track.kind);
 			if (streamType === 'SCREEN') {
 				await removeScreenTrackId(track.id);
 			}

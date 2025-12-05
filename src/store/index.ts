@@ -2,8 +2,16 @@ import { createMutex } from '../lib/roomMutex.js';
 import { StreamType } from '../type/media.js';
 
 import { getParticipants, addParticipants, removeParticipants } from './participantStore.js';
-import { addPeer, removePeer, getPeer } from './PeerConnectionStore.js';
-import { getMedia, updateMedia, removeMedia, isScreenTrack, addScreenTrack, removeScreenTrack } from './trackStore.js';
+import { addPeer, removePeer, getPeer } from './peerConnectionStore.js';
+import {
+	getMedia,
+	updateMedia,
+	removeMedia,
+	isScreenTrack,
+	addScreenTrack,
+	removeScreenTrack,
+	removeTrack,
+} from './trackStore.js';
 import { getTransceiver, removePeerTransceiver, removeTransceiver } from './transceiverStore.js';
 
 export const { runExclusive } = createMutex();
@@ -22,6 +30,8 @@ export const removePeerConnection = (userId: string) => runExclusive(async () =>
 export const getUserMedia = (userId: string) => runExclusive(async () => getMedia(userId));
 export const updateUserMedia = (userId: string, streamType: StreamType, track: MediaStreamTrack) =>
 	runExclusive(async () => updateMedia(userId, streamType, track));
+export const removeUserTrack = (userId: string, streamType: StreamType, trackKind: string) =>
+	runExclusive(async () => removeTrack(userId, streamType, trackKind));
 export const removeUserMedia = (userId: string) => runExclusive(async () => removeMedia(userId));
 
 export const isScreenTrackId = (id: string) => runExclusive(async () => isScreenTrack(id));

@@ -43,6 +43,15 @@ export const updateMedia = async (userId: string, streamType: StreamType, track:
 	mediaStore.set(userId, { ...prev, [key]: track });
 };
 
+export const removeTrack = async (userId: string, streamType: StreamType, trackKind: string) => {
+	const key = getKey(streamType, trackKind);
+	const prev = mediaStore.get(userId);
+	if (!prev) {
+		return;
+	}
+	mediaStore.set(userId, { ...prev, [key]: null });
+};
+
 export const removeMedia = async (userId: string) => {
 	mediaStore.delete(userId);
 };
