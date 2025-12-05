@@ -1,6 +1,6 @@
 import { Client } from '@stomp/stompjs';
 
-import { AnswerPayloadType, IcePayloadType, MidPayloadType } from '../type/signal.js';
+import { AnswerPayloadType, IcePayloadType, MidPayloadType, ScreenTrackPayloadType } from '../type/signal.js';
 
 interface SignalSenderProps {
 	client: Client;
@@ -29,5 +29,9 @@ export const signalSender = ({ client }: SignalSenderProps) => {
 		sendSignal('', payload);
 	};
 
-	return { sendAnswer, sendIce, sendMid };
+	const sendScreenTrack = (payload: ScreenTrackPayloadType) => {
+		sendSignal('', payload);
+	};
+
+	return { sendAnswer, sendIce, sendMid, sendScreenTrack };
 };

@@ -49,10 +49,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			const parameters = e.transceiver.sender.getParameters();
-			const rid = parameters.encodings[0].rid;
-			const streamType = rid?.includes('screen') ? 'SCREEN' : 'USER';
-			registerTrack(id, roomId, streamType, e.track);
+			registerTrack(id, roomId, e.track);
 		};
 
 		await addPeerConnection(id, pc);

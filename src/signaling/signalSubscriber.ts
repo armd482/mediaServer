@@ -11,7 +11,7 @@ interface SignalSubscriberProps {
 export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 	const { connectPeerConnection, createSdp, finalizeMid, finalizeOtherMid, registerIce, registerSdp } =
 		peerConnectionManager({ client });
-	const { handleIce, handleMid, handleOffer } = subscribeHandler({
+	const { handleIce, handleMid, handleOffer, handleScreenTrack } = subscribeHandler({
 		connectPeerConnection,
 		createSdp,
 		finalizeMid,
@@ -34,9 +34,15 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		return sub;
 	};
 
+	const subscribeScreenTrack = () => {
+		const sub = client.subscribe('screenTrack', (message) => handleScreenTrack(client, message));
+		return sub;
+	};
+
 	return {
 		subscribeIce,
 		subscribeMid,
 		subscribeOffer,
+		subscribeScreenTrack,
 	};
 };

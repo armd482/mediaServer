@@ -8,29 +8,13 @@ import {
 import { TransceiverType } from '../type/media.js';
 
 export const transceiverManager = () => {
-	const setRid = (transceiver: RTCRtpTransceiver, rid: string) => {
-		try {
-			const params = transceiver.sender.getParameters();
-			if (!params.encodings || params.encodings.length === 0) {
-				params.encodings = [{ rid }];
-			} else {
-				params.encodings[0].rid = rid;
-			}
-			transceiver.sender.setParameters(params);
-		} catch (err) {
-			console.warn('setRid failed or not supported:', err);
-		}
-	};
-
 	const createPeerReciever = async (pc: RTCPeerConnection, userId: string) => {
 		const audio = pc.addTransceiver('audio', { direction: 'sendonly' });
 		const video = pc.addTransceiver('video', { direction: 'sendonly' });
 
 		const screenAudio = pc.addTransceiver('audio', { direction: 'sendonly' });
-		setRid(screenAudio, 'screen-audio');
 
 		const screenVideo = pc.addTransceiver('video', { direction: 'sendonly' });
-		setRid(screenVideo, 'screen-video');
 
 		const media = await getUserMedia(userId);
 

@@ -27,3 +27,13 @@ export interface MidResponseType {
 	id: string;
 	roomId: string;
 }
+
+export interface ScreenTrackResponseType {
+	id: string;
+	trackId: string;
+}
+
+export interface ScreenTrackPayloadType {
+	id: string;
+	trackId: string;
+}

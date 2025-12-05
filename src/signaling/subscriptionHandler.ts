@@ -1,12 +1,13 @@
 import { Client, IMessage } from '@stomp/stompjs';
 
+import { addScreenTrackId } from '../store/index.js';
 import {
 	ConnectPeerConnectionProps,
 	createSdpProps,
 	RegisterIceProps,
 	RegisterSdpProps,
 } from '../type/peerConnection.js';
-import { IceResponseType, MidResponseType, OfferResponseType } from '../type/signal.js';
+import { IceResponseType, MidResponseType, OfferResponseType, ScreenTrackResponseType } from '../type/signal.js';
 
 import { signalSender } from './signerSender.js';
 
@@ -58,9 +59,17 @@ export const subscribeHandler = ({
 		finalizeOtherMid(id, roomId);
 	};
 
+	const handleScreenTrack = async (client: Client, message: IMessage) => {
+		const { sendScreenTrack } = signalSender({ client });
+		const { id, trackId } = parseMessage<ScreenTrackResponseType>(message);
+		await addScreenTrackId(trackId);
+		sendScreenTrack({ id, trackId });
+	};
+
 	return {
 		handleIce,
 		handleMid,
 		handleOffer,
+		handleScreenTrack,
 	};
 };

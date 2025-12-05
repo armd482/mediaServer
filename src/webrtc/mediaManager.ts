@@ -6,11 +6,13 @@ import {
 	getParticipant,
 	getPeerConnection,
 	getUserPeerTransceiver,
+	isScreenTrackId,
 	removeParticipant,
+	removeScreenTrackId,
 	removeUserMedia,
 	updateUserMedia,
 } from '../store/index.js';
-import { TransceiverMidType, StreamType } from '../type/media.js';
+import { TransceiverMidType } from '../type/media.js';
 import { MidPayloadType } from '../type/signal.js';
 
 import { transceiverManager } from './transceiverManager.js';
@@ -109,7 +111,8 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		);
 	};
 
-	const registerTrack = async (id: string, roomId: string, streamType: StreamType, track: MediaStreamTrack) => {
+	const registerTrack = async (id: string, roomId: string, track: MediaStreamTrack) => {
+		const streamType = (await isScreenTrackId(track.id)) ? 'SCREEN' : 'USER';
 		await updateUserMedia(id, streamType, track);
 
 		const participant = await getParticipant(roomId);
@@ -148,6 +151,9 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 					t.video?.sender.replaceTrack(null);
 				} catch {}
 			});
+			if (streamType === 'SCREEN') {
+				await removeScreenTrackId(track.id);
+			}
 		};
 	};
 
