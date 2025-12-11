@@ -28,12 +28,12 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		registerSdp,
 	});
 	const subscribeOffer = () => {
-		const sub = client.subscribe('offer', (message) => handleOffer(client, message));
+		const sub = client.subscribe('/user/queue/signal/offer', (message) => handleOffer(client, message));
 		return sub;
 	};
 
 	const subscribeIce = () => {
-		const sub = client.subscribe('ice', handleIce);
+		const sub = client.subscribe('/user/queue/signal/ice', handleIce);
 		return sub;
 	};
 
@@ -43,12 +43,12 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 	};
 
 	const subscribeScreenTrack = () => {
-		const sub = client.subscribe('screenTrack', (message) => handleScreenTrack(client, message));
+		const sub = client.subscribe('/user/queue/signal/screen', (message) => handleScreenTrack(client, message));
 		return sub;
 	};
 
 	const subscribeLeave = () => {
-		const sub = client.subscribe('leave', handleClosePeerConnection);
+		const sub = client.subscribe('/user/queue/signal/leave', handleClosePeerConnection);
 		return sub;
 	};
 

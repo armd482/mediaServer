@@ -9,6 +9,7 @@ import {
 	removePeerConnection,
 	removeUserMedia,
 } from '../store/index.js';
+import { updatePeer } from '../store/peerConnectionStore.js';
 import {
 	AddTrackProps,
 	ClosePeerConnectionProps,
@@ -58,6 +59,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
 			registerTrack(userId, roomId, e.track);
+			console.log(e);
 		};
 
 		await addPeerConnection(userId, pc);
@@ -65,45 +67,52 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 	};
 
 	const registerSdp = async ({ sdp, userId }: RegisterSdpProps) => {
-		const pc = await getPeerConnection(userId);
-		if (!pc) {
+		const data = await getPeerConnection(userId);
+		if (!data) {
 			return;
 		}
-		await pc.setLocalDescription(sdp);
+		await data.pc.setRemoteDescription(sdp);
 	};
 
 	const createSdp = async ({ userId }: createSdpProps) => {
-		const pc = await getPeerConnection(userId);
-		if (!pc) {
+		const data = await getPeerConnection(userId);
+		if (!data) {
 			return;
 		}
-		const sdp = await pc.createAnswer();
+		const sdp = await data.pc.createAnswer();
+		await data.pc.setLocalDescription(sdp);
 		return sdp;
 	};
 
 	const addTrack = async ({ stream, track, userId }: AddTrackProps) => {
-		const pc = await getPeerConnection(userId);
-		if (!pc) {
+		const data = await getPeerConnection(userId);
+		if (!data) {
 			return;
 		}
 		if (stream) {
-			pc.addTrack(track, stream);
+			data.pc.addTrack(track, stream);
 			return;
 		}
-		pc.addTrack(track);
+		data.pc.addTrack(track);
 	};
 
 	const registerIce = async ({ ice, userId }: RegisterIceProps) => {
-		const pc = await getPeerConnection(userId);
-		if (!pc) {
-			return;
+		const data = await getPeerConnection(userId);
+		if (!data) return;
+
+		const { iceQueue, pc, remoteSet } = data;
+
+		if (!remoteSet) {
+			iceQueue.push(ice);
+			return updatePeer(userId, { iceQueue });
 		}
+
 		pc.addIceCandidate(ice);
 	};
 
 	const closePeerConnection = async ({ id, roomId }: ClosePeerConnectionProps) => {
-		const pc = await getPeerConnection(id);
-		pc?.close();
+		const data = await getPeerConnection(id);
+		data?.pc?.close();
 		await removePeerConnection(id);
 		await removeTransceiver(id, roomId);
 		await removeParticipant(roomId, id);

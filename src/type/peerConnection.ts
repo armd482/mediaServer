@@ -1,3 +1,9 @@
+export interface ServerPeerConnectionData {
+	pc: RTCPeerConnection;
+	remoteSet: boolean;
+	iceQueue: RTCIceCandidateInit[];
+}
+
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
 
 export interface PeerConnectionInit {

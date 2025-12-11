@@ -1,8 +1,9 @@
 import { createMutex } from '../lib/roomMutex.js';
 import { StreamType } from '../type/media.js';
+import { ServerPeerConnectionData } from '../type/peerConnection.js';
 
 import { getParticipants, addParticipants, removeParticipants } from './participantStore.js';
-import { addPeer, removePeer, getPeer } from './peerConnectionStore.js';
+import { addPeer, removePeer, getPeer, updatePeer } from './peerConnectionStore.js';
 import {
 	getMedia,
 	updateMedia,
@@ -26,6 +27,8 @@ export const addPeerConnection = (userId: string, pc: RTCPeerConnection) =>
 	runExclusive(async () => addPeer(userId, pc));
 export const getPeerConnection = (userId: string) => runExclusive(async () => getPeer(userId));
 export const removePeerConnection = (userId: string) => runExclusive(async () => removePeer(userId));
+export const updatePeerConnection = (userId: string, data: Partial<ServerPeerConnectionData>) =>
+	runExclusive(async () => updatePeer(userId, data));
 
 export const getUserMedia = (userId: string) => runExclusive(async () => getMedia(userId));
 export const updateUserMedia = (userId: string, streamType: StreamType, track: MediaStreamTrack) =>

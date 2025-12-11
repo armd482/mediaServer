@@ -97,11 +97,11 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 
 		await Promise.all(
 			Array.from(participant).map(async (userId) => {
-				const peerConnection = await getPeerConnection(userId);
-				if (!peerConnection) {
+				const data = await getPeerConnection(userId);
+				if (!data) {
 					return;
 				}
-				const transceiver = await addTransceiver(id, peerConnection);
+				const transceiver = await addTransceiver(id, data.pc);
 				if (!transceiver) {
 					return;
 				}

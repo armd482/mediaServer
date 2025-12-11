@@ -52,8 +52,11 @@ export const subscribeHandler = ({
 			userId,
 		});
 		await registerSdp({ sdp: parsedRemoteSdp, userId });
-		const sdp = JSON.stringify(await createSdp({ userId }));
-		sendAnswer({ sdp, userId });
+		const answerSdp = await createSdp({ userId });
+		if (!answerSdp) {
+			return;
+		}
+		sendAnswer({ sdp: JSON.stringify(answerSdp), userId });
 	};
 
 	const handleIce = async (message: IMessage) => {

@@ -1,16 +1,24 @@
-const peerConnectionsStore = new Map<string, RTCPeerConnection>();
+import { ServerPeerConnectionData } from '../type/peerConnection.js';
 
-export const getPeer = async (userId: string) => {
-	try {
-		return peerConnectionsStore.get(userId);
-	} catch {
-		return;
-	}
-};
-export const addPeer = async (userId: string, pc: RTCPeerConnection) => {
-	peerConnectionsStore.set(userId, pc);
+const peerConnectionsStore = new Map<string, ServerPeerConnectionData>();
+
+export const addPeer = (userId: string, pc: RTCPeerConnection) => {
+	peerConnectionsStore.set(userId, {
+		iceQueue: [],
+		pc,
+		remoteSet: false,
+	});
 };
 
-export const removePeer = async (userId: string) => {
+export const getPeer = (userId: string) => peerConnectionsStore.get(userId);
+
+export const updatePeer = (userId: string, data: Partial<ServerPeerConnectionData>) => {
+	const current = peerConnectionsStore.get(userId);
+	if (!current) return;
+	peerConnectionsStore.set(userId, { ...current, ...data });
+};
+
+export const removePeer = (userId: string) => {
+	peerConnectionsStore.get(userId)?.pc.close();
 	peerConnectionsStore.delete(userId);
 };

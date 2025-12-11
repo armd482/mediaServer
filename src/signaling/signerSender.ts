@@ -18,11 +18,11 @@ export const signalSender = ({ client }: SignalSenderProps) => {
 	};
 
 	const sendAnswer = (payload: AnswerPayloadType) => {
-		sendSignal('', payload);
+		sendSignal('/app/signal/answer', payload);
 	};
 
 	const sendIce = (payload: IcePayloadType) => {
-		sendSignal('', payload);
+		sendSignal('/app/signal/ice', payload);
 	};
 
 	const sendMid = (payload: MidPayloadType) => {
