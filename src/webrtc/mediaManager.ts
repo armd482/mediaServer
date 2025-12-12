@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 
+import { signalSender } from '../signaling/signerSender.js';
 import {
 	getParticipant,
 	getPeerConnection,
@@ -7,9 +8,9 @@ import {
 	isScreenTrackId,
 	removeScreenTrackId,
 	removeUserTrack,
-	updatePeerConnection,
 	updateUserMedia,
 } from '../store/index.js';
+import { OfferPayloadType } from '../type/signal.js';
 
 interface MediaManagerProps {
 	client: Client;
@@ -35,6 +36,7 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 	};
 
 	const registerOwnerTrack = async (id: string, roomId: string, track: MediaStreamTrack) => {
+		const { sendOffer } = signalSender({ client });
 		const streamType = (await isScreenTrackId(track.id)) ? 'SCREEN' : 'USER';
 		await updateUserMedia(id, streamType, track);
 
@@ -54,10 +56,16 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 				if (!pc) {
 					return;
 				}
-				await updatePeerConnection(userId, { iceQueue: [], remoteSet: false });
 				pc.pc.addTrack(track);
+
+				const sdp = await pc.pc.createOffer();
+				const payload: OfferPayloadType = {
+					sdp: JSON.stringify(sdp),
+					userId,
+				};
+				sendOffer(payload);
+
 				/* send signal(trackId: userId ) */
-				/* send offer(renogotiation) */
 			}),
 		);
 

@@ -15,11 +15,11 @@ export interface ConnectPeerConnectionProps extends PeerConnectionInit {
 	sdp: RTCSessionDescriptionInit;
 }
 
-export interface RegisterSdpProps extends PeerConnectionInit {
+export interface RegisterRemoteSdpProps extends PeerConnectionInit {
 	sdp: RTCSessionDescriptionInit;
 }
 
-export interface createSdpProps extends PeerConnectionInit {}
+export interface CreateSdpProps extends PeerConnectionInit {}
 
 export interface RegisterLocalSdpProps extends PeerConnectionInit {
 	sdp: RTCSessionDescriptionInit;

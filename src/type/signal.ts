@@ -1,5 +1,10 @@
 import { TransceiverMidType } from './media.js';
 
+export interface OfferPayloadType {
+	userId: string;
+	sdp: string;
+}
+
 export interface OfferResponseType {
 	userId: string;
 	sdp: string;
@@ -7,6 +12,11 @@ export interface OfferResponseType {
 }
 
 export interface AnswerPayloadType {
+	userId: string;
+	sdp: string;
+}
+
+export interface AnswerResponseType {
 	userId: string;
 	sdp: string;
 }

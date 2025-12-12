@@ -15,10 +15,10 @@ import {
 	AddTrackProps,
 	ClosePeerConnectionProps,
 	ConnectPeerConnectionProps,
-	createSdpProps,
+	CreateSdpProps,
 	RegisterIceProps,
 	RegisterLocalSdpProps,
-	RegisterSdpProps,
+	RegisterRemoteSdpProps,
 } from '../type/peerConnection.js';
 
 import { mediaManager } from './mediaManager.js';
@@ -69,7 +69,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		return;
 	};
 
-	const registerSdp = async ({ sdp, userId }: RegisterSdpProps) => {
+	const registerRemoteSdp = async ({ sdp, userId }: RegisterRemoteSdpProps) => {
 		const data = await getPeerConnection(userId);
 		if (!data) {
 			return;
@@ -77,7 +77,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		await data.pc.setRemoteDescription(sdp);
 	};
 
-	const createSdp = async ({ userId }: createSdpProps) => {
+	const createSdp = async ({ userId }: CreateSdpProps) => {
 		const data = await getPeerConnection(userId);
 		if (!data) {
 			return;
@@ -134,6 +134,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		createSdp,
 		registerIce,
 		registerLocalSdp,
-		registerSdp,
+		registerRemoteSdp,
 	};
 };
