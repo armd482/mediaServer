@@ -5,6 +5,7 @@ const peerConnectionsStore = new Map<string, ServerPeerConnectionData>();
 export const addPeer = (userId: string, pc: RTCPeerConnection) => {
 	peerConnectionsStore.set(userId, {
 		iceQueue: [],
+		makingOffer: false,
 		pc,
 		remoteSet: false,
 	});

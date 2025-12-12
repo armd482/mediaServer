@@ -8,7 +8,6 @@ export const initClient = () => {
 
 	const client = new Client({
 		brokerURL: undefined,
-		debug: (str) => console.log('[STOMP]', str),
 		onConnect: () => {
 			const { subscribeAnswer, subscribeIce, subscribeLeave, subscribeOffer, subscribeScreenTrack } = signalSubscriber({
 				client,

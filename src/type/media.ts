@@ -6,6 +6,7 @@ export interface TrackType {
 	videoTrack: MediaStreamTrack | null;
 	screenAudioTrack: MediaStreamTrack | null;
 	screenVideoTrack: MediaStreamTrack | null;
+	mediaStream: MediaStream | null;
 }
 
 export interface TransceiverMidType {

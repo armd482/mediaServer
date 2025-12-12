@@ -6,6 +6,7 @@ const screenTrackStore = new Set<string>();
 export const getMedia = async (userId: string) => {
 	const value = {
 		audioTrack: null,
+		mediaStream: null,
 		screenAudioTrack: null,
 		screenVideoTrack: null,
 		videoTrack: null,
@@ -32,15 +33,21 @@ const getKey = (streamType: StreamType, trackKind: string) => {
 	return 'screenVideoTrack';
 };
 
-export const updateMedia = async (userId: string, streamType: StreamType, track: MediaStreamTrack) => {
-	const prev = mediaStore.get(userId) ?? {
+export const updateMedia = async (
+	userId: string,
+	streamType: StreamType,
+	track: MediaStreamTrack,
+	mediaStream?: MediaStream,
+) => {
+	const prev: TrackType = mediaStore.get(userId) ?? {
 		audioTrack: null,
+		mediaStream: null,
 		screenAudioTrack: null,
 		screenVideoTrack: null,
 		videoTrack: null,
 	};
 	const key = getKey(streamType, track.kind);
-	mediaStore.set(userId, { ...prev, [key]: track });
+	mediaStore.set(userId, { ...prev, [key]: track, mediaStream: mediaStream ?? prev.mediaStream });
 };
 
 export const removeTrack = async (userId: string, streamType: StreamType, trackKind: string) => {

@@ -8,6 +8,7 @@ import {
 	isScreenTrackId,
 	removeScreenTrackId,
 	removeUserTrack,
+	updatePeerConnection,
 	updateUserMedia,
 } from '../store/index.js';
 import { OfferPayloadType } from '../type/signal.js';
@@ -16,29 +17,64 @@ interface MediaManagerProps {
 	client: Client;
 }
 export const mediaManager = ({ client }: MediaManagerProps) => {
-	const registerOtherTracks = async (roomId: string, pc: RTCPeerConnection) => {
+	const negotiation = async (userId: string) => {
+		const { sendOffer } = signalSender({ client });
+		const data = await getPeerConnection(userId);
+		if (!data || data.makingOffer || data.pc.signalingState !== 'stable') {
+			return;
+		}
+
+		await updatePeerConnection(userId, { makingOffer: true });
+		const { pc } = data;
+		const offerSdp = await pc.createOffer();
+		await pc.setLocalDescription(offerSdp);
+		const payload: OfferPayloadType = {
+			sdp: JSON.stringify(offerSdp),
+			userId,
+		};
+		sendOffer(payload);
+	};
+
+	const registerOtherTracks = async (userId: string, roomId: string, pc: RTCPeerConnection) => {
 		const participant = await getParticipant(roomId);
-		console.log(participant);
 
 		if (!participant || participant.size === 0) {
 			return;
 		}
 
 		await Promise.all(
-			Array.from(participant).map(async (userId) => {
-				const media = await getUserMedia(userId);
-				media.audioTrack && pc.addTrack(media.audioTrack);
-				media.videoTrack && pc.addTrack(media.videoTrack);
-				media.screenAudioTrack && pc.addTrack(media.screenAudioTrack);
-				media.screenVideoTrack && pc.addTrack(media.screenVideoTrack);
+			Array.from(participant).map(async (user) => {
+				if (userId === user) {
+					return;
+				}
+				const { audioTrack, mediaStream, screenAudioTrack, screenVideoTrack, videoTrack } = await getUserMedia(user);
+				if (!mediaStream) {
+					return;
+				}
+				if (audioTrack) {
+					console.log('add audioTrack');
+					pc.addTrack(audioTrack, mediaStream);
+				}
+
+				if (videoTrack) {
+					console.log('add videoTrack');
+					pc.addTrack(videoTrack, mediaStream);
+				}
+
+				if (screenAudioTrack) {
+					pc.addTrack(screenAudioTrack, mediaStream);
+				}
+
+				if (screenVideoTrack) {
+					pc.addTrack(screenVideoTrack, mediaStream);
+				}
 			}),
 		);
 	};
 
-	const registerOwnerTrack = async (id: string, roomId: string, track: MediaStreamTrack) => {
-		const { sendOffer } = signalSender({ client });
-		const streamType = (await isScreenTrackId(track.id)) ? 'SCREEN' : 'USER';
-		await updateUserMedia(id, streamType, track);
+	const registerOwnerTrack = async (id: string, roomId: string, event: RTCTrackEvent) => {
+		const streamType = (await isScreenTrackId(event.track.id)) ? 'SCREEN' : 'USER';
+		await updateUserMedia(id, streamType, event.track, event.streams[0]);
 
 		const participant = await getParticipant(roomId);
 
@@ -56,26 +92,21 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 				if (!pc) {
 					return;
 				}
-				pc.pc.addTrack(track);
 
-				const sdp = await pc.pc.createOffer();
-				const payload: OfferPayloadType = {
-					sdp: JSON.stringify(sdp),
-					userId,
-				};
-				sendOffer(payload);
+				const senderExists = pc.pc.getSenders().some((s) => s.track?.id === event.track.id);
+				if (!senderExists) pc.pc.addTrack(event.track, event.streams[0]);
 
 				/* send signal(trackId: userId ) */
 			}),
 		);
 
-		track.onended = async () => {
-			removeUserTrack(id, streamType, track.kind);
+		event.track.onended = async () => {
+			removeUserTrack(id, streamType, event.track.kind);
 			if (streamType === 'SCREEN') {
-				await removeScreenTrackId(track.id);
+				await removeScreenTrackId(event.track.id);
 			}
 		};
 	};
 
-	return { registerOtherTracks, registerOwnerTrack };
+	return { negotiation, registerOtherTracks, registerOwnerTrack };
 };

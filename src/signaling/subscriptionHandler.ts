@@ -3,7 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import { addScreenTrackId, getPeerConnection, updatePeerConnection } from '../store/index.js';
 import {
 	ClosePeerConnectionProps,
-	ConnectPeerConnectionProps,
+	CreatePeerConnectionProps,
 	CreateSdpProps,
 	RegisterIceProps,
 	RegisterLocalSdpProps,
@@ -21,8 +21,8 @@ import {
 import { signalSender } from './signerSender.js';
 
 interface SignalHandlerProps {
-	connectPeerConnection: (props: ConnectPeerConnectionProps) => Promise<void>;
-	createSdp: (props: CreateSdpProps) => Promise<RTCSessionDescriptionInit | undefined>;
+	createPeerConnection: (props: CreatePeerConnectionProps) => Promise<RTCPeerConnection>;
+	createAnswerSdp: (props: CreateSdpProps) => Promise<RTCSessionDescriptionInit | undefined>;
 	registerLocalSdp: (props: RegisterLocalSdpProps) => Promise<void>;
 	registerRemoteSdp: (props: RegisterRemoteSdpProps) => Promise<void>;
 	registerIce: (props: RegisterIceProps) => Promise<void>;
@@ -31,8 +31,8 @@ interface SignalHandlerProps {
 
 export const subscribeHandler = ({
 	closePeerConnection,
-	connectPeerConnection,
-	createSdp,
+	createAnswerSdp,
+	createPeerConnection,
 	registerIce,
 	registerLocalSdp,
 	registerRemoteSdp,
@@ -64,18 +64,22 @@ export const subscribeHandler = ({
 		const response = parseMessage<OfferResponseType>(message);
 		const { roomId, sdp: remoteSdp, userId } = response;
 		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
-		await connectPeerConnection({
+
+		await createPeerConnection({
 			roomId,
-			sdp: parsedRemoteSdp,
 			userId,
 		});
-		const answerSdp = await createSdp({ userId });
+
+		await registerRemoteSdp({ sdp: parsedRemoteSdp, userId });
+		const answerSdp = await createAnswerSdp({ userId });
 		if (!answerSdp) {
 			return;
 		}
-		await registerLocalSdp({ sdp: answerSdp, userId });
 		await sendIceQueue(userId, client);
 		sendAnswer({ sdp: JSON.stringify(answerSdp), userId });
+
+		await registerLocalSdp({ sdp: answerSdp, userId });
+		await updatePeerConnection(userId, { makingOffer: false });
 	};
 
 	const handleAnswer = async (client: Client, message: IMessage) => {

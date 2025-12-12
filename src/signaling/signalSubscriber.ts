@@ -9,14 +9,20 @@ interface SignalSubscriberProps {
 }
 
 export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
-	const { closePeerConnection, connectPeerConnection, createSdp, registerIce, registerLocalSdp, registerRemoteSdp } =
-		peerConnectionManager({
-			client,
-		});
+	const {
+		closePeerConnection,
+		createAnswerSdp,
+		createPeerConnection,
+		registerIce,
+		registerLocalSdp,
+		registerRemoteSdp,
+	} = peerConnectionManager({
+		client,
+	});
 	const { handleAnswer, handleClosePeerConnection, handleIce, handleOffer, handleScreenTrack } = subscribeHandler({
 		closePeerConnection,
-		connectPeerConnection,
-		createSdp,
+		createAnswerSdp,
+		createPeerConnection,
 		registerIce,
 		registerLocalSdp,
 		registerRemoteSdp,

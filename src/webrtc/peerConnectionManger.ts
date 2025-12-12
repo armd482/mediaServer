@@ -14,7 +14,7 @@ import { updatePeer } from '../store/peerConnectionStore.js';
 import {
 	AddTrackProps,
 	ClosePeerConnectionProps,
-	ConnectPeerConnectionProps,
+	CreatePeerConnectionProps,
 	CreateSdpProps,
 	RegisterIceProps,
 	RegisterLocalSdpProps,
@@ -28,25 +28,24 @@ interface PeerConnectionManagerProps {
 }
 
 export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
-	const { registerOtherTracks, registerOwnerTrack } = mediaManager({
+	const { negotiation, registerOtherTracks, registerOwnerTrack } = mediaManager({
 		client,
 	});
 
-	const connectPeerConnection = async ({ roomId, sdp, userId }: ConnectPeerConnectionProps) => {
+	const createPeerConnection = async ({ roomId, userId }: CreatePeerConnectionProps) => {
 		const { sendIce } = signalSender({ client });
 		const connection = await getPeerConnection(userId);
 
 		if (connection) {
-			return;
+			return connection.pc;
 		}
 
-		const pc = new wrtc.RTCPeerConnection({
+		const pc: RTCPeerConnection = new wrtc.RTCPeerConnection({
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		pc.setRemoteDescription(sdp);
+		await registerOtherTracks(userId, roomId, pc);
 
-		await registerOtherTracks(roomId, pc);
 		await addParticipant(roomId, userId);
 
 		pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
@@ -61,12 +60,15 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			registerOwnerTrack(userId, roomId, e.track);
-			console.log(e);
+			await registerOwnerTrack(userId, roomId, e);
+		};
+
+		pc.onnegotiationneeded = async () => {
+			await negotiation(userId);
 		};
 
 		await addPeerConnection(userId, pc);
-		return;
+		return pc;
 	};
 
 	const registerRemoteSdp = async ({ sdp, userId }: RegisterRemoteSdpProps) => {
@@ -74,10 +76,33 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		if (!data) {
 			return;
 		}
-		await data.pc.setRemoteDescription(sdp);
+
+		const type = sdp.type;
+
+		if (type === 'offer') {
+			await data.pc.setRemoteDescription(sdp);
+			return;
+		}
+
+		if (type === 'answer') {
+			if (data.pc.signalingState !== 'have-local-offer') {
+				return;
+			}
+			await data.pc.setRemoteDescription(sdp);
+			return;
+		}
 	};
 
-	const createSdp = async ({ userId }: CreateSdpProps) => {
+	const createOfferSdp = async ({ userId }: CreateSdpProps) => {
+		const data = await getPeerConnection(userId);
+		if (!data) {
+			return;
+		}
+		const sdp = await data.pc.createOffer();
+		return sdp;
+	};
+
+	const createAnswerSdp = async ({ userId }: CreateSdpProps) => {
 		const data = await getPeerConnection(userId);
 		if (!data) {
 			return;
@@ -130,8 +155,9 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 	return {
 		addTrack,
 		closePeerConnection,
-		connectPeerConnection,
-		createSdp,
+		createAnswerSdp,
+		createOfferSdp,
+		createPeerConnection,
 		registerIce,
 		registerLocalSdp,
 		registerRemoteSdp,
