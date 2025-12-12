@@ -9,22 +9,16 @@ interface SignalSubscriberProps {
 }
 
 export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
-	const {
+	const { closePeerConnection, connectPeerConnection, createSdp, registerIce, registerLocalSdp, registerSdp } =
+		peerConnectionManager({
+			client,
+		});
+	const { handleClosePeerConnection, handleIce, handleOffer, handleScreenTrack } = subscribeHandler({
 		closePeerConnection,
 		connectPeerConnection,
 		createSdp,
-		finalizeMid,
-		finalizeOtherMid,
 		registerIce,
-		registerSdp,
-	} = peerConnectionManager({ client });
-	const { handleClosePeerConnection, handleIce, handleMid, handleOffer, handleScreenTrack } = subscribeHandler({
-		closePeerConnection,
-		connectPeerConnection,
-		createSdp,
-		finalizeMid,
-		finalizeOtherMid,
-		registerIce,
+		registerLocalSdp,
 		registerSdp,
 	});
 	const subscribeOffer = () => {
@@ -34,11 +28,6 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 
 	const subscribeIce = () => {
 		const sub = client.subscribe('/user/queue/signal/ice', handleIce);
-		return sub;
-	};
-
-	const subscribeMid = () => {
-		const sub = client.subscribe('mid', handleMid);
 		return sub;
 	};
 
@@ -55,7 +44,6 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 	return {
 		subscribeIce,
 		subscribeLeave,
-		subscribeMid,
 		subscribeOffer,
 		subscribeScreenTrack,
 	};

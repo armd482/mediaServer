@@ -12,6 +12,7 @@ export interface PeerConnectionInit {
 
 export interface ConnectPeerConnectionProps extends PeerConnectionInit {
 	roomId: string;
+	sdp: RTCSessionDescriptionInit;
 }
 
 export interface RegisterSdpProps extends PeerConnectionInit {
@@ -19,6 +20,10 @@ export interface RegisterSdpProps extends PeerConnectionInit {
 }
 
 export interface createSdpProps extends PeerConnectionInit {}
+
+export interface RegisterLocalSdpProps extends PeerConnectionInit {
+	sdp: RTCSessionDescriptionInit;
+}
 
 export interface AddTrackProps extends PeerConnectionInit {
 	track: MediaStreamTrack;

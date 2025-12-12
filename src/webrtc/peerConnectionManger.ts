@@ -3,6 +3,7 @@ import wrtc from 'wrtc';
 
 import { signalSender } from '../signaling/signerSender.js';
 import {
+	addParticipant,
 	addPeerConnection,
 	getPeerConnection,
 	removeParticipant,
@@ -16,6 +17,7 @@ import {
 	ConnectPeerConnectionProps,
 	createSdpProps,
 	RegisterIceProps,
+	RegisterLocalSdpProps,
 	RegisterSdpProps,
 } from '../type/peerConnection.js';
 
@@ -26,12 +28,11 @@ interface PeerConnectionManagerProps {
 }
 
 export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
-	const { finalizeMid, finalizeOtherMid, prepareOtherSenders, prepareSenders, registerTrack, removeTransceiver } =
-		mediaManager({
-			client,
-		});
+	const { registerOtherTracks, registerOwnerTrack } = mediaManager({
+		client,
+	});
 
-	const connectPeerConnection = async ({ roomId, userId }: ConnectPeerConnectionProps) => {
+	const connectPeerConnection = async ({ roomId, sdp, userId }: ConnectPeerConnectionProps) => {
 		const { sendIce } = signalSender({ client });
 		const connection = await getPeerConnection(userId);
 
@@ -43,8 +44,10 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		await prepareSenders(userId, pc, roomId);
-		await prepareOtherSenders(userId, roomId);
+		pc.setRemoteDescription(sdp);
+
+		await registerOtherTracks(roomId, pc);
+		await addParticipant(roomId, userId);
 
 		pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
 			if (!e.candidate) {
@@ -58,7 +61,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			registerTrack(userId, roomId, e.track);
+			registerOwnerTrack(userId, roomId, e.track);
 			console.log(e);
 		};
 
@@ -80,8 +83,15 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			return;
 		}
 		const sdp = await data.pc.createAnswer();
-		await data.pc.setLocalDescription(sdp);
 		return sdp;
+	};
+
+	const registerLocalSdp = async ({ sdp, userId }: RegisterLocalSdpProps) => {
+		const data = await getPeerConnection(userId);
+		if (!data) {
+			return;
+		}
+		await data.pc.setLocalDescription(sdp);
 	};
 
 	const addTrack = async ({ stream, track, userId }: AddTrackProps) => {
@@ -114,7 +124,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		const data = await getPeerConnection(id);
 		data?.pc?.close();
 		await removePeerConnection(id);
-		await removeTransceiver(id, roomId);
 		await removeParticipant(roomId, id);
 		await removeUserMedia(id);
 	};
@@ -123,9 +132,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		closePeerConnection,
 		connectPeerConnection,
 		createSdp,
-		finalizeMid,
-		finalizeOtherMid,
 		registerIce,
+		registerLocalSdp,
 		registerSdp,
 	};
 };

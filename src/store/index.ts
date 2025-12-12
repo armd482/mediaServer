@@ -13,7 +13,6 @@ import {
 	removeScreenTrack,
 	removeTrack,
 } from './trackStore.js';
-import { getTransceiver, removePeerTransceiver, removeTransceiver } from './transceiverStore.js';
 
 export const { runExclusive } = createMutex();
 
@@ -40,8 +39,3 @@ export const removeUserMedia = (userId: string) => runExclusive(async () => remo
 export const isScreenTrackId = (id: string) => runExclusive(async () => isScreenTrack(id));
 export const addScreenTrackId = (id: string) => runExclusive(async () => addScreenTrack(id));
 export const removeScreenTrackId = (id: string) => runExclusive(async () => removeScreenTrack(id));
-
-export const getUserPeerTransceiver = (userId: string) => runExclusive(async () => getTransceiver(userId));
-export const removeUserTransceiver = (userId: string) => runExclusive(async () => removeTransceiver(userId));
-export const removeUserPeerTransceiver = (userId: string, peerUserId: string) =>
-	runExclusive(async () => removePeerTransceiver(userId, peerUserId));
