@@ -1,0 +1,42 @@
+{
+  "name": "media-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint 'src/**/*.{ts,js}' --fix"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/sockjs": "^0.3.36",
+    "@types/sockjs-client": "^1.5.4",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-define-config": "^2.1.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-sonarjs": "^3.0.5",
+    "eslint-plugin-unicorn": "^62.0.0",
+    "node-pre-gyp": "^0.17.0",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.7.3",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@stomp/stompjs": "^7.2.1",
+    "@types/stompjs": "^2.3.10",
+    "async-mutex": "^0.5.0",
+    "sockjs-client": "^1.6.1",
+    "stomp-broker-js": "^1.3.0",
+    "wrtc": "^0.4.7",
+    "ws": "^8.18.3"
+  }
+}
