@@ -15,3 +15,9 @@ export interface TransceiverMidType {
 }
 
 export type TransceiverType = Record<'audio' | 'video' | 'screenAudio' | 'screenVideo', RTCRtpTransceiver | null>;
+
+export interface PendingTrackEntry {
+	track?: MediaStreamTrack;
+	stream?: MediaStream;
+	type?: StreamType;
+}

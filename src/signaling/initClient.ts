@@ -9,7 +9,7 @@ export const initClient = () => {
 	const client = new Client({
 		brokerURL: undefined,
 		onConnect: () => {
-			const { subscribeAnswer, subscribeIce, subscribeLeave, subscribeOffer, subscribeScreenTrack } = signalSubscriber({
+			const { subscribeAnswer, subscribeIce, subscribeLeave, subscribeOffer } = signalSubscriber({
 				client,
 			});
 			const offerSub = subscribeOffer();
@@ -20,9 +20,6 @@ export const initClient = () => {
 
 			const iceSub = subscribeIce();
 			subscription.set('ice', iceSub);
-
-			const screenTrackSub = subscribeScreenTrack();
-			subscription.set('screenTrack', screenTrackSub);
 
 			const leaveSub = subscribeLeave();
 			subscription.set('leave', leaveSub);

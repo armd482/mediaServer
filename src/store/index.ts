@@ -1,5 +1,5 @@
 import { createMutex } from '../lib/roomMutex.js';
-import { StreamType } from '../type/media.js';
+import { PendingTrackEntry, StreamType } from '../type/media.js';
 import { ServerPeerConnectionData } from '../type/peerConnection.js';
 
 import { getParticipants, addParticipants, removeParticipants } from './participantStore.js';
@@ -8,10 +8,10 @@ import {
 	getMedia,
 	updateMedia,
 	removeMedia,
-	isScreenTrack,
-	addScreenTrack,
-	removeScreenTrack,
 	removeTrack,
+	getPendingTrackStore,
+	setPendingTrackStore,
+	deletePendingTrackStore,
 } from './trackStore.js';
 
 export const { runExclusive } = createMutex();
@@ -40,6 +40,7 @@ export const removeUserTrack = (userId: string, streamType: StreamType, trackKin
 	runExclusive(async () => removeTrack(userId, streamType, trackKind));
 export const removeUserMedia = (userId: string) => runExclusive(async () => removeMedia(userId));
 
-export const isScreenTrackId = (id: string) => runExclusive(async () => isScreenTrack(id));
-export const addScreenTrackId = (id: string) => runExclusive(async () => addScreenTrack(id));
-export const removeScreenTrackId = (id: string) => runExclusive(async () => removeScreenTrack(id));
+export const getPendingTrack = async (trackId: string) => runExclusive(async () => getPendingTrackStore(trackId));
+export const setPendingTrack = async (trackId: string, entry: Partial<PendingTrackEntry>) =>
+	runExclusive(async () => setPendingTrackStore(trackId, entry));
+export const deletePendingTrack = async (trackId: string) => runExclusive(async () => deletePendingTrackStore(trackId));

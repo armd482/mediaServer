@@ -15,16 +15,18 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		createPeerConnection,
 		registerIce,
 		registerLocalSdp,
+		registerOwnerTrack,
 		registerRemoteSdp,
 	} = peerConnectionManager({
 		client,
 	});
-	const { handleAnswer, handleClosePeerConnection, handleIce, handleOffer, handleScreenTrack } = subscribeHandler({
+	const { handleAnswer, handleClosePeerConnection, handleIce, handleOffer } = subscribeHandler({
 		closePeerConnection,
 		createAnswerSdp,
 		createPeerConnection,
 		registerIce,
 		registerLocalSdp,
+		registerOwnerTrack,
 		registerRemoteSdp,
 	});
 	const subscribeOffer = () => {
@@ -42,11 +44,6 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		return sub;
 	};
 
-	const subscribeScreenTrack = () => {
-		const sub = client.subscribe('/user/queue/signal/screen', (message) => handleScreenTrack(client, message));
-		return sub;
-	};
-
 	const subscribeLeave = () => {
 		const sub = client.subscribe('/user/queue/signal/leave', handleClosePeerConnection);
 		return sub;
@@ -57,6 +54,5 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		subscribeIce,
 		subscribeLeave,
 		subscribeOffer,
-		subscribeScreenTrack,
 	};
 };

@@ -5,10 +5,13 @@ import { signalSender } from '../signaling/signerSender.js';
 import {
 	addParticipant,
 	addPeerConnection,
+	deletePendingTrack,
 	getPeerConnection,
+	getPendingTrack,
 	removeParticipant,
 	removePeerConnection,
 	removeUserMedia,
+	setPendingTrack,
 } from '../store/index.js';
 import { updatePeer } from '../store/peerConnectionStore.js';
 import {
@@ -60,7 +63,18 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			await registerOwnerTrack(userId, roomId, e);
+			const trackId = e.track.id;
+			const entry = await getPendingTrack(trackId);
+
+			if (!entry?.type) {
+				await setPendingTrack(trackId, {
+					stream: e.streams[0],
+					track: e.track,
+				});
+				return;
+			}
+			await deletePendingTrack(trackId);
+			await registerOwnerTrack(userId, roomId, e.track, e.streams[0], entry.type);
 		};
 
 		pc.onnegotiationneeded = async () => {
@@ -160,6 +174,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		createPeerConnection,
 		registerIce,
 		registerLocalSdp,
+		registerOwnerTrack,
 		registerRemoteSdp,
 	};
 };

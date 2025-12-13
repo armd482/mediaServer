@@ -1,25 +1,19 @@
-import { TransceiverMidType } from './media.js';
+import { StreamType } from './media.js';
 
-export interface OfferPayloadType {
+interface SdpPayloadType {
 	userId: string;
 	sdp: string;
 }
 
-export interface OfferResponseType {
-	userId: string;
-	sdp: string;
+export interface OfferPayloadType extends SdpPayloadType {}
+
+export interface OfferResponseType extends SdpPayloadType {
 	roomId: string;
 }
 
-export interface AnswerPayloadType {
-	userId: string;
-	sdp: string;
-}
+export interface AnswerPayloadType extends SdpPayloadType {}
 
-export interface AnswerResponseType {
-	userId: string;
-	sdp: string;
-}
+export interface AnswerResponseType extends SdpPayloadType {}
 
 export interface IceResponseType {
 	userId: string;
@@ -28,24 +22,20 @@ export interface IceResponseType {
 
 export interface IcePayloadType extends IceResponseType {}
 
-export interface MidPayloadType {
-	id: string;
-	mid: Record<string, TransceiverMidType>;
-}
-
-export interface MidResponseType {
-	id: string;
+export interface TrackResponseType {
+	userId: string;
 	roomId: string;
+	track: Record<string, TrackInfoType>;
 }
 
-export interface ScreenTrackResponseType {
-	id: string;
-	trackId: string;
+export interface TrackInfoType {
+	userId: string;
+	type: StreamType;
 }
 
-export interface ScreenTrackPayloadType {
-	id: string;
-	trackId: string;
+export interface TrackPayloadType {
+	userId: string;
+	track: Record<string, TrackInfoType>;
 }
 
 export interface LeaveResponseType {

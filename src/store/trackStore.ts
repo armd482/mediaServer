@@ -1,7 +1,7 @@
-import { StreamType, TrackType } from '../type/media.js';
+import { StreamType, TrackType, PendingTrackEntry } from '../type/media.js';
 
 const mediaStore = new Map<string, TrackType>();
-const screenTrackStore = new Set<string>();
+const pendingTracksStore = new Map<string, PendingTrackEntry>();
 
 export const getMedia = async (userId: string) => {
 	const value = {
@@ -63,12 +63,13 @@ export const removeMedia = async (userId: string) => {
 	mediaStore.delete(userId);
 };
 
-export const isScreenTrack = async (value: string) => screenTrackStore.has(value);
+export const getPendingTrackStore = async (trackId: string) => pendingTracksStore.get(trackId);
 
-export const addScreenTrack = async (value: string) => {
-	screenTrackStore.add(value);
+export const setPendingTrackStore = async (trackId: string, entry: Partial<PendingTrackEntry>) => {
+	const current = pendingTracksStore.get(trackId) ?? {};
+	pendingTracksStore.set(trackId, { ...current, ...entry });
 };
 
-export const removeScreenTrack = async (value: string) => {
-	screenTrackStore.delete(value);
+export const deletePendingTrackStore = async (trackId: string) => {
+	pendingTracksStore.delete(trackId);
 };

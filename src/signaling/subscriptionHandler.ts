@@ -1,6 +1,13 @@
 import { Client, IMessage } from '@stomp/stompjs';
 
-import { addScreenTrackId, getPeerConnection, updatePeerConnection } from '../store/index.js';
+import {
+	deletePendingTrack,
+	getPeerConnection,
+	getPendingTrack,
+	setPendingTrack,
+	updatePeerConnection,
+} from '../store/index.js';
+import { StreamType } from '../type/media.js';
 import {
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
@@ -15,7 +22,7 @@ import {
 	IceResponseType,
 	LeaveResponseType,
 	OfferResponseType,
-	ScreenTrackResponseType,
+	TrackResponseType,
 } from '../type/signal.js';
 
 import { signalSender } from './signerSender.js';
@@ -25,6 +32,13 @@ interface SignalHandlerProps {
 	createAnswerSdp: (props: CreateSdpProps) => Promise<RTCSessionDescriptionInit | undefined>;
 	registerLocalSdp: (props: RegisterLocalSdpProps) => Promise<void>;
 	registerRemoteSdp: (props: RegisterRemoteSdpProps) => Promise<void>;
+	registerOwnerTrack: (
+		id: string,
+		roomId: string,
+		track: MediaStreamTrack,
+		mediaStream: MediaStream,
+		streamType: StreamType,
+	) => Promise<void>;
 	registerIce: (props: RegisterIceProps) => Promise<void>;
 	closePeerConnection: (props: ClosePeerConnectionProps) => Promise<void>;
 }
@@ -35,6 +49,7 @@ export const subscribeHandler = ({
 	createPeerConnection,
 	registerIce,
 	registerLocalSdp,
+	registerOwnerTrack,
 	registerRemoteSdp,
 }: SignalHandlerProps) => {
 	const parseMessage = <T>(message: IMessage) => {
@@ -95,11 +110,19 @@ export const subscribeHandler = ({
 		await registerIce({ ice: parsedIce, userId });
 	};
 
-	const handleScreenTrack = async (client: Client, message: IMessage) => {
-		const { sendScreenTrack } = signalSender({ client });
-		const { id, trackId } = parseMessage<ScreenTrackResponseType>(message);
-		await addScreenTrackId(trackId);
-		sendScreenTrack({ id, trackId });
+	const handleTrack = async (message: IMessage) => {
+		const { roomId, track, userId } = parseMessage<TrackResponseType>(message);
+		await Promise.all(
+			Object.entries(track).map(async ([trackId, { type }]) => {
+				const entry = await getPendingTrack(trackId);
+				if (entry?.track && entry?.stream) {
+					await deletePendingTrack(trackId);
+					await registerOwnerTrack(userId, roomId, entry.track, entry.stream, type);
+					return;
+				}
+				await setPendingTrack(trackId, { type });
+			}),
+		);
 	};
 
 	const handleClosePeerConnection = async (message: IMessage) => {
@@ -112,6 +135,6 @@ export const subscribeHandler = ({
 		handleClosePeerConnection,
 		handleIce,
 		handleOffer,
-		handleScreenTrack,
+		handleTrack,
 	};
 };
