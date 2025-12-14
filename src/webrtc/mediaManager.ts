@@ -23,7 +23,7 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 			return;
 		}
 
-		await updatePeerConnection(userId, { makingOffer: true });
+		await updatePeerConnection(userId, { makingOffer: true, remoteSet: false });
 		const { pc } = data;
 		const offerSdp = await pc.createOffer();
 		await pc.setLocalDescription(offerSdp);

@@ -12,6 +12,7 @@ import {
 	removePeerConnection,
 	removeUserMedia,
 	setPendingTrack,
+	updatePeerConnection,
 } from '../store/index.js';
 import { updatePeer } from '../store/peerConnectionStore.js';
 import {
@@ -50,8 +51,13 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 
 		await addParticipant(roomId, userId);
 
-		pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
-			if (!e.candidate) {
+		pc.onicecandidate = async (e: RTCPeerConnectionIceEvent) => {
+			const data = await getPeerConnection(userId);
+			if (!data || !e.candidate) {
+				return;
+			}
+			if (!data.remoteSet) {
+				await updatePeerConnection(userId, { iceQueue: [...(data.iceQueue ?? []), e.candidate] });
 				return;
 			}
 			const payload = {
@@ -62,7 +68,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			console.log(userId, e.track);
 			const trackId = e.track.id;
 			const entry = await getPendingTrack(trackId);
 
@@ -72,7 +77,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 				});
 				return;
 			}
-			console.log('registeringTrack');
 			await deletePendingTrack(trackId);
 			await registerOwnerTrack(userId, roomId, e.track, entry.streamType);
 		};
