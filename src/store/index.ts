@@ -30,12 +30,8 @@ export const updatePeerConnection = (userId: string, data: Partial<ServerPeerCon
 	runExclusive(async () => updatePeer(userId, data));
 
 export const getUserMedia = (userId: string) => runExclusive(async () => getMedia(userId));
-export const updateUserMedia = (
-	userId: string,
-	streamType: StreamType,
-	track: MediaStreamTrack,
-	mediaStream?: MediaStream,
-) => runExclusive(async () => updateMedia(userId, streamType, track, mediaStream));
+export const updateUserMedia = (userId: string, streamType: StreamType, track: MediaStreamTrack) =>
+	runExclusive(async () => updateMedia(userId, streamType, track));
 export const removeUserTrack = (userId: string, streamType: StreamType, trackKind: string) =>
 	runExclusive(async () => removeTrack(userId, streamType, trackKind));
 export const removeUserMedia = (userId: string) => runExclusive(async () => removeMedia(userId));

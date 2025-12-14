@@ -30,7 +30,7 @@ export interface TrackResponseType {
 
 export interface TrackInfoType {
 	userId: string;
-	type: StreamType;
+	streamType: StreamType;
 }
 
 export interface TrackPayloadType {

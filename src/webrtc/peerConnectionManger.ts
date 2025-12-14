@@ -15,7 +15,6 @@ import {
 } from '../store/index.js';
 import { updatePeer } from '../store/peerConnectionStore.js';
 import {
-	AddTrackProps,
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
 	CreateSdpProps,
@@ -63,18 +62,19 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
+			console.log(userId, e.track);
 			const trackId = e.track.id;
 			const entry = await getPendingTrack(trackId);
 
-			if (!entry?.type) {
+			if (!entry?.streamType) {
 				await setPendingTrack(trackId, {
-					stream: e.streams[0],
 					track: e.track,
 				});
 				return;
 			}
+			console.log('registeringTrack');
 			await deletePendingTrack(trackId);
-			await registerOwnerTrack(userId, roomId, e.track, e.streams[0], entry.type);
+			await registerOwnerTrack(userId, roomId, e.track, entry.streamType);
 		};
 
 		pc.onnegotiationneeded = async () => {
@@ -133,18 +133,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		await data.pc.setLocalDescription(sdp);
 	};
 
-	const addTrack = async ({ stream, track, userId }: AddTrackProps) => {
-		const data = await getPeerConnection(userId);
-		if (!data) {
-			return;
-		}
-		if (stream) {
-			data.pc.addTrack(track, stream);
-			return;
-		}
-		data.pc.addTrack(track);
-	};
-
 	const registerIce = async ({ ice, userId }: RegisterIceProps) => {
 		const data = await getPeerConnection(userId);
 		if (!data) return;
@@ -167,7 +155,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		await removeUserMedia(id);
 	};
 	return {
-		addTrack,
 		closePeerConnection,
 		createAnswerSdp,
 		createOfferSdp,

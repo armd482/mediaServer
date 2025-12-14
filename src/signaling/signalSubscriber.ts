@@ -20,7 +20,7 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 	} = peerConnectionManager({
 		client,
 	});
-	const { handleAnswer, handleClosePeerConnection, handleIce, handleOffer } = subscribeHandler({
+	const { handleAnswer, handleClosePeerConnection, handleIce, handleOffer, handleTrack } = subscribeHandler({
 		closePeerConnection,
 		createAnswerSdp,
 		createPeerConnection,
@@ -44,6 +44,11 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		return sub;
 	};
 
+	const subscribeTrack = () => {
+		const sub = client.subscribe('/user/queue/signal/track', handleTrack);
+		return sub;
+	};
+
 	const subscribeLeave = () => {
 		const sub = client.subscribe('/user/queue/signal/leave', handleClosePeerConnection);
 		return sub;
@@ -54,5 +59,6 @@ export const signalSubscriber = ({ client }: SignalSubscriberProps) => {
 		subscribeIce,
 		subscribeLeave,
 		subscribeOffer,
+		subscribeTrack,
 	};
 };

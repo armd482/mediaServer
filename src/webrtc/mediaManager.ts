@@ -49,30 +49,28 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 				if (userId === user) {
 					return;
 				}
-				const { audioTrack, mediaStream, screenAudioTrack, screenVideoTrack, videoTrack } = await getUserMedia(user);
-				if (!mediaStream) {
-					return;
-				}
-				if (audioTrack) {
-					console.log('add audioTrack');
-					pc.addTrack(audioTrack, mediaStream);
-					trackInfo.set(audioTrack.id, { type: 'USER', userId: user });
-				}
-
+				const { audioTrack, screenAudioTrack, screenVideoTrack, videoTrack } = await getUserMedia(user);
+				console.log(user, 'trackInfo', audioTrack, videoTrack);
 				if (videoTrack) {
 					console.log('add videoTrack');
-					pc.addTrack(videoTrack, mediaStream);
-					trackInfo.set(videoTrack.id, { type: 'USER', userId: user });
+					pc.addTransceiver(videoTrack);
+					trackInfo.set(videoTrack.id, { streamType: 'USER', userId: user });
+				}
+
+				if (audioTrack) {
+					console.log('add audioTrack');
+					pc.addTransceiver(audioTrack);
+					trackInfo.set(audioTrack.id, { streamType: 'USER', userId: user });
 				}
 
 				if (screenAudioTrack) {
-					pc.addTrack(screenAudioTrack, mediaStream);
-					trackInfo.set(screenAudioTrack.id, { type: 'SCREEN', userId: user });
+					pc.addTransceiver(screenAudioTrack);
+					trackInfo.set(screenAudioTrack.id, { streamType: 'SCREEN', userId: user });
 				}
 
 				if (screenVideoTrack) {
-					pc.addTrack(screenVideoTrack, mediaStream);
-					trackInfo.set(screenVideoTrack.id, { type: 'SCREEN', userId: user });
+					pc.addTransceiver(screenVideoTrack);
+					trackInfo.set(screenVideoTrack.id, { streamType: 'SCREEN', userId: user });
 				}
 			}),
 		);
@@ -88,17 +86,13 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		sendTrack(payload);
 	};
 
-	const registerOwnerTrack = async (
-		id: string,
-		roomId: string,
-		track: MediaStreamTrack,
-		mediaStream: MediaStream,
-		streamType: StreamType,
-	) => {
+	const registerOwnerTrack = async (id: string, roomId: string, track: MediaStreamTrack, streamType: StreamType) => {
 		const { sendTrack } = signalSender({ client });
-		await updateUserMedia(id, streamType, track, mediaStream);
+		await updateUserMedia(id, streamType, track);
 
 		const participant = await getParticipant(roomId);
+
+		console.log('registering');
 
 		if (!participant) {
 			return;
@@ -115,13 +109,12 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 					return;
 				}
 
-				const senderExists = pc.pc.getSenders().some((s) => s.track?.id === track.id);
-				if (!senderExists) pc.pc.addTrack(track, mediaStream);
+				pc.pc.addTransceiver(track);
 
 				const payload: TrackPayloadType = {
 					track: {
 						[track.id]: {
-							type: streamType,
+							streamType,
 							userId: id,
 						},
 					},
