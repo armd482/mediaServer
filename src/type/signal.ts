@@ -13,7 +13,9 @@ export interface OfferResponseType extends SdpPayloadType {
 
 export interface AnswerPayloadType extends SdpPayloadType {}
 
-export interface AnswerResponseType extends SdpPayloadType {}
+export interface AnswerResponseType extends SdpPayloadType {
+	roomId: string;
+}
 
 export interface IceResponseType {
 	userId: string;
@@ -22,10 +24,12 @@ export interface IceResponseType {
 
 export interface IcePayloadType extends IceResponseType {}
 
+type Mid = string;
+
 export interface TrackResponseType {
 	userId: string;
 	roomId: string;
-	track: Record<string, TrackInfoType>;
+	transceiver: Record<Mid, TrackInfoType>;
 }
 
 export interface TrackInfoType {
@@ -35,7 +39,7 @@ export interface TrackInfoType {
 
 export interface TrackPayloadType {
 	userId: string;
-	track: Record<string, TrackInfoType>;
+	transceiver: Record<Mid, TrackInfoType>;
 }
 
 export interface LeaveResponseType {

@@ -15,6 +15,7 @@ import {
 	updatePeerConnection,
 } from '../store/index.js';
 import { updatePeer } from '../store/peerConnectionStore.js';
+import { PendingTrackEntry } from '../type/media.js';
 import {
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
@@ -68,16 +69,16 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
-			const trackId = e.track.id;
-			const entry = await getPendingTrack(trackId);
+			const mid = e.transceiver.mid as string;
+			const entry = (await getPendingTrack(userId, e.track.id)) as PendingTrackEntry | undefined;
 
-			if (!entry?.streamType) {
-				await setPendingTrack(trackId, {
+			if (!entry || !entry.streamType || !entry.userId) {
+				await setPendingTrack(userId, mid, {
 					track: e.track,
 				});
 				return;
 			}
-			await deletePendingTrack(trackId);
+			await deletePendingTrack(userId, mid);
 			await registerOwnerTrack(userId, roomId, e.track, entry.streamType);
 		};
 

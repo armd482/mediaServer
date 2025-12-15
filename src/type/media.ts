@@ -2,13 +2,15 @@ export type ParticipantType = Set<string>;
 export type StreamType = 'SCREEN' | 'USER';
 
 export interface TrackType {
-	audioTrack: MediaStreamTrack | null;
-	videoTrack: MediaStreamTrack | null;
-	screenAudioTrack: MediaStreamTrack | null;
-	screenVideoTrack: MediaStreamTrack | null;
+	audio: MediaStreamTrack | null;
+	video: MediaStreamTrack | null;
+	screenAudio: MediaStreamTrack | null;
+	screenVideo: MediaStreamTrack | null;
 }
 
 export interface PendingTrackEntry {
+	mid?: string;
 	track?: MediaStreamTrack;
+	userId?: string;
 	streamType?: StreamType;
 }

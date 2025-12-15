@@ -4,14 +4,17 @@ import {
 	deletePendingTrack,
 	getPeerConnection,
 	getPendingTrack,
+	getTransceiver,
 	setPendingTrack,
+	setTransceiver,
 	updatePeerConnection,
 } from '../store/index.js';
-import { StreamType } from '../type/media.js';
+import { PendingTrackEntry, StreamType } from '../type/media.js';
 import {
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
 	CreateSdpProps,
+	DeviceTransceiverType,
 	RegisterIceProps,
 	RegisterLocalSdpProps,
 	RegisterRemoteSdpProps,
@@ -22,6 +25,8 @@ import {
 	IceResponseType,
 	LeaveResponseType,
 	OfferResponseType,
+	TrackInfoType,
+	TrackPayloadType,
 	TrackResponseType,
 } from '../type/signal.js';
 
@@ -96,6 +101,38 @@ export const subscribeHandler = ({
 		const parsedRemoteSdp = JSON.parse(sdp) as RTCSessionDescriptionInit;
 		await registerRemoteSdp({ sdp: parsedRemoteSdp, userId });
 		await sendIceQueue(userId, client);
+
+		const { sendTrack } = signalSender({ client });
+
+		const transceiverData = new Map<string, TrackInfoType>();
+
+		const transceiver = (await getTransceiver(userId)) as undefined | Map<string, DeviceTransceiverType>;
+
+		if (!transceiver) {
+			return;
+		}
+
+		transceiver.forEach(async (transceiverType, fromUserId) => {
+			Object.entries(transceiverType).forEach(async ([type, t]) => {
+				if (t) {
+					transceiverData.set(t.mid as string, {
+						streamType: type === 'audio' || type === 'video' ? 'USER' : 'SCREEN',
+						userId: fromUserId,
+					});
+					await setTransceiver(userId, fromUserId, { [type]: null });
+				}
+			});
+		});
+		if (transceiverData.size === 0) {
+			return;
+		}
+
+		const payload: TrackPayloadType = {
+			transceiver: Object.fromEntries(transceiverData),
+			userId,
+		};
+
+		sendTrack(payload);
 	};
 
 	const handleIce = async (message: IMessage) => {
@@ -105,16 +142,16 @@ export const subscribeHandler = ({
 	};
 
 	const handleTrack = async (message: IMessage) => {
-		const { roomId, track, userId } = parseMessage<TrackResponseType>(message);
+		const { roomId, transceiver, userId } = parseMessage<TrackResponseType>(message);
 		await Promise.all(
-			Object.entries(track).map(async ([trackId, { streamType }]) => {
-				const entry = await getPendingTrack(trackId);
+			Object.entries(transceiver).map(async ([mid, { streamType }]) => {
+				const entry = (await getPendingTrack(userId, mid)) as PendingTrackEntry | undefined;
 				if (entry?.track) {
-					await deletePendingTrack(trackId);
+					await deletePendingTrack(userId, mid);
 					await registerOwnerTrack(userId, roomId, entry.track, streamType);
 					return;
 				}
-				await setPendingTrack(trackId, { streamType });
+				await setPendingTrack(userId, mid, { streamType });
 			}),
 		);
 	};

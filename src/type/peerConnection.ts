@@ -38,3 +38,6 @@ export interface ClosePeerConnectionProps {
 	id: string;
 	roomId: string;
 }
+
+export type DeviceType = 'audio' | 'video' | 'screenAudio' | 'screenVideo';
+export type DeviceTransceiverType = Record<DeviceType, RTCRtpTransceiver | null>;
