@@ -1,5 +1,5 @@
-import { Client } from '@stomp/stompjs';
 import wrtc from 'wrtc';
+import WebSocket from 'ws';
 
 import { signalSender } from '../signaling/signerSender.js';
 import {
@@ -14,7 +14,6 @@ import {
 	setPendingTrack,
 	updatePeerConnection,
 } from '../store/index.js';
-import { updatePeer } from '../store/peerConnectionStore.js';
 import { PendingTrackEntry } from '../type/media.js';
 import {
 	ClosePeerConnectionProps,
@@ -28,7 +27,7 @@ import {
 import { mediaManager } from './mediaManager.js';
 
 interface PeerConnectionManagerProps {
-	client: Client;
+	client: WebSocket;
 }
 
 export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
@@ -37,6 +36,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 	});
 
 	const createPeerConnection = async ({ roomId, userId }: CreatePeerConnectionProps) => {
+		let negotiationTimer: NodeJS.Timeout | null = null;
+
 		const { sendIce } = signalSender({ client });
 		const connection = await getPeerConnection(userId);
 
@@ -69,6 +70,7 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.ontrack = async (e: RTCTrackEvent) => {
+			console.log('onTrack');
 			const mid = e.transceiver.mid as string;
 			const entry = (await getPendingTrack(userId, e.track.id)) as PendingTrackEntry | undefined;
 
@@ -83,7 +85,20 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		};
 
 		pc.onnegotiationneeded = async () => {
-			await negotiation(userId);
+			if (pc.signalingState !== 'stable') {
+				return;
+			}
+
+			if (negotiationTimer) {
+				clearTimeout(negotiationTimer);
+			}
+
+			negotiationTimer = setTimeout(async () => {
+				negotiationTimer = null;
+				console.log('negotiation ', userId);
+
+				await negotiation(userId);
+			}, 100);
 		};
 
 		await addPeerConnection(userId, pc);
@@ -146,7 +161,8 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 
 		if (!remoteSet) {
 			iceQueue.push(ice);
-			return updatePeer(userId, { iceQueue });
+			await updatePeerConnection(userId, { iceQueue });
+			return;
 		}
 
 		pc.addIceCandidate(ice);

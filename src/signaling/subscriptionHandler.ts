@@ -1,4 +1,4 @@
-import { Client, IMessage } from '@stomp/stompjs';
+import WebSocket from 'ws';
 
 import {
 	deletePendingTrack,
@@ -51,12 +51,7 @@ export const subscribeHandler = ({
 	registerOwnerTrack,
 	registerRemoteSdp,
 }: SignalHandlerProps) => {
-	const parseMessage = <T>(message: IMessage) => {
-		const response = JSON.parse(message.body) as T;
-		return response;
-	};
-
-	const sendIceQueue = async (userId: string, client: Client) => {
+	const sendIceQueue = async (userId: string, client: WebSocket) => {
 		const { sendIce } = signalSender({ client });
 		const data = await getPeerConnection(userId);
 		if (data) {
@@ -73,9 +68,9 @@ export const subscribeHandler = ({
 		}
 	};
 
-	const handleOffer = async (client: Client, message: IMessage) => {
+	const handleOffer = async (client: WebSocket, response: OfferResponseType) => {
+		console.log('getOffer');
 		const { sendAnswer } = signalSender({ client });
-		const response = parseMessage<OfferResponseType>(message);
 		const { roomId, sdp: remoteSdp, userId } = response;
 		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
 
@@ -96,8 +91,8 @@ export const subscribeHandler = ({
 		await updatePeerConnection(userId, { makingOffer: false });
 	};
 
-	const handleAnswer = async (client: Client, message: IMessage) => {
-		const { sdp, userId } = parseMessage<AnswerResponseType>(message);
+	const handleAnswer = async (client: WebSocket, response: AnswerResponseType) => {
+		const { sdp, userId } = response;
 		const parsedRemoteSdp = JSON.parse(sdp) as RTCSessionDescriptionInit;
 		await registerRemoteSdp({ sdp: parsedRemoteSdp, userId });
 		await sendIceQueue(userId, client);
@@ -135,14 +130,14 @@ export const subscribeHandler = ({
 		sendTrack(payload);
 	};
 
-	const handleIce = async (message: IMessage) => {
-		const { ice, userId } = parseMessage<IceResponseType>(message);
+	const handleIce = async (response: IceResponseType) => {
+		const { ice, userId } = response;
 		const parsedIce = JSON.parse(ice) as RTCIceCandidateInit;
 		await registerIce({ ice: parsedIce, userId });
 	};
 
-	const handleTrack = async (message: IMessage) => {
-		const { roomId, transceiver, userId } = parseMessage<TrackResponseType>(message);
+	const handleTrack = async (response: TrackResponseType) => {
+		const { roomId, transceiver, userId } = response;
 		await Promise.all(
 			Object.entries(transceiver).map(async ([mid, { streamType }]) => {
 				const entry = (await getPendingTrack(userId, mid)) as PendingTrackEntry | undefined;
@@ -156,8 +151,8 @@ export const subscribeHandler = ({
 		);
 	};
 
-	const handleClosePeerConnection = async (message: IMessage) => {
-		const { id, roomId } = parseMessage<LeaveResponseType>(message);
+	const handleClosePeerConnection = async (response: LeaveResponseType) => {
+		const { id, roomId } = response;
 		await closePeerConnection({ id, roomId });
 	};
 

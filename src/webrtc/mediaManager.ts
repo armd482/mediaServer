@@ -1,4 +1,4 @@
-import { Client } from '@stomp/stompjs';
+import WebSocket from 'ws';
 
 import { signalSender } from '../signaling/signerSender.js';
 import {
@@ -15,13 +15,13 @@ import { OfferPayloadType } from '../type/signal.js';
 import { getTrackType } from '../util/trackType.js';
 
 interface MediaManagerProps {
-	client: Client;
+	client: WebSocket;
 }
 export const mediaManager = ({ client }: MediaManagerProps) => {
 	const negotiation = async (userId: string) => {
 		const { sendOffer } = signalSender({ client });
 		const data = await getPeerConnection(userId);
-		if (!data || data.makingOffer || data.pc.signalingState !== 'stable') {
+		if (!data || data.makingOffer) {
 			return;
 		}
 
@@ -61,7 +61,7 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 					return;
 				}
 				const { audio, screenAudio, screenVideo, video } = await getUserMedia(user);
-				console.log(user, 'trackInfo', audio, video);
+				//console.log(user, 'trackInfo', audio, video);
 
 				if (audio) {
 					addTransceiver(pc, audio, user, userId, 'USER');

@@ -1,36 +1,38 @@
-import { Client } from '@stomp/stompjs';
+import WebSocket from 'ws';
 
 import { AnswerPayloadType, IcePayloadType, OfferPayloadType, TrackPayloadType } from '../type/signal.js';
 
 interface SignalSenderProps {
-	client: Client;
+	client: WebSocket;
 }
 
 export const signalSender = ({ client }: SignalSenderProps) => {
-	const sendSignal = <T>(destination: string, payload: T) => {
-		client.publish({
-			body: JSON.stringify(payload),
-			destination,
-			headers: {
-				'content-type': 'application/json',
-			},
-		});
+	const sendSignal = <T>(path: string, payload: T) => {
+		client.send(
+			Buffer.from(
+				JSON.stringify({
+					path,
+					payload,
+					type: 'signal',
+				}),
+			),
+		);
 	};
 
 	const sendOffer = (payload: OfferPayloadType) => {
-		sendSignal('/app/signal/offer', payload);
+		sendSignal('OFFER', payload);
 	};
 
 	const sendAnswer = (payload: AnswerPayloadType) => {
-		sendSignal('/app/signal/answer', payload);
+		sendSignal('ANSWER', payload);
 	};
 
 	const sendIce = (payload: IcePayloadType) => {
-		sendSignal('/app/signal/ice', payload);
+		sendSignal('ICE', payload);
 	};
 
 	const sendTrack = (payload: TrackPayloadType) => {
-		sendSignal('/app/signal/track', payload);
+		sendSignal('TRACK', payload);
 	};
 
 	return { sendAnswer, sendIce, sendOffer, sendTrack };

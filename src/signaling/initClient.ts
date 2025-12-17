@@ -1,41 +1,71 @@
-import { Client, StompSubscription } from '@stomp/stompjs';
-import SockJs from 'sockjs-client';
+import WebSocket, { RawData } from 'ws';
 
-import { signalSubscriber } from './signalSubscriber.js';
+import { peerConnectionManager } from '../webrtc/peerConnectionManger.js';
+
+import { subscribeHandler } from './subscriptionHandler.js';
 
 export const initClient = () => {
-	const subscription = new Map<string, StompSubscription>();
+	const client = new WebSocket('ws://localhost:8080/ws?userId=mediaServer');
 
-	const client = new Client({
-		brokerURL: undefined,
-		onConnect: () => {
-			const { subscribeAnswer, subscribeIce, subscribeLeave, subscribeOffer, subscribeTrack } = signalSubscriber({
-				client,
-			});
-			const offerSub = subscribeOffer();
-			subscription.set('offer', offerSub);
+	const getRawData = (data: RawData, isBinary: boolean) => {
+		if (isBinary) {
+			return data.toString('utf-8');
+		}
 
-			const answerSub = subscribeAnswer();
-			subscription.set('answer', answerSub);
+		return data.toString();
+	};
 
-			const iceSub = subscribeIce();
-			subscription.set('ice', iceSub);
+	const {
+		closePeerConnection,
+		createAnswerSdp,
+		createPeerConnection,
+		registerIce,
+		registerLocalSdp,
+		registerOwnerTrack,
+		registerRemoteSdp,
+	} = peerConnectionManager({ client });
 
-			const trackSub = subscribeTrack();
-			subscription.set('track', trackSub);
-
-			const leaveSub = subscribeLeave();
-			subscription.set('leave', leaveSub);
-
-			console.log('connected');
-		},
-		onDisconnect: () => {
-			subscription.forEach((sub) => sub.unsubscribe());
-			subscription.clear();
-		},
-		webSocketFactory: () => new SockJs('http://localhost:8080/ws?userId=mediaServer'),
+	const { handleAnswer, handleIce, handleOffer, handleTrack } = subscribeHandler({
+		closePeerConnection,
+		createAnswerSdp,
+		createPeerConnection,
+		registerIce,
+		registerLocalSdp,
+		registerOwnerTrack,
+		registerRemoteSdp,
 	});
-	console.log('try connecting...');
 
-	client.activate();
+	client.on('message', (data, isBinary) => {
+		const rawData = getRawData(data, isBinary);
+		const { path, payload } = JSON.parse(rawData);
+		if (path === 'OFFER') {
+			handleOffer(client, payload);
+			return;
+		}
+
+		if (path === 'ANSWER') {
+			handleAnswer(client, payload);
+			return;
+		}
+
+		if (path === 'ICE') {
+			handleIce(payload);
+			return;
+		}
+
+		if (path === 'TRACK') {
+			console.log('getTrackInfo');
+			handleTrack(payload);
+		}
+	});
+
+	client.on('error', () => {
+		console.log('error');
+	});
+
+	client.on('close', () => {
+		console.log('close');
+	});
+
+	console.log('try connecting...');
 };
