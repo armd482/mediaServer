@@ -40,4 +40,4 @@ export interface ClosePeerConnectionProps {
 }
 
 export type DeviceType = 'audio' | 'video' | 'screenAudio' | 'screenVideo';
-export type DeviceTransceiverType = Record<DeviceType, RTCRtpTransceiver | null>;
+export type DeviceTransceiverType = Partial<Record<DeviceType, RTCRtpTransceiver>>;

@@ -6,25 +6,15 @@ export const getTransceiverStore = async (toUserId: string, fromUserId?: string)
 	if (fromUserId) {
 		return trasnceiversStore.get(toUserId)?.get(fromUserId);
 	}
-	return trasnceiversStore.get(toUserId);
+	return trasnceiversStore.get(toUserId) ?? new Map();
 };
 
-export const setTransceiverStore = async (
-	toUserId: string,
-	fromUserId: string,
-	value: Partial<DeviceTransceiverType>,
-) => {
+export const setTransceiverStore = async (toUserId: string, fromUserId: string, value: DeviceTransceiverType) => {
 	if (!trasnceiversStore.get(toUserId)) {
 		trasnceiversStore.set(toUserId, new Map<string, DeviceTransceiverType>());
 	}
-	const prev =
-		trasnceiversStore.get(toUserId)?.get(fromUserId) ??
-		({
-			audio: null,
-			screenAudio: null,
-			screenVideo: null,
-			video: null,
-		} as DeviceTransceiverType);
+
+	const prev = trasnceiversStore.get(toUserId)?.get(fromUserId) ?? {};
 	trasnceiversStore.get(toUserId)?.set(fromUserId, { ...prev, ...value });
 };
 

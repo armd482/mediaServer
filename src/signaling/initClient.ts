@@ -17,29 +17,26 @@ export const initClient = () => {
 
 	const {
 		closePeerConnection,
-		createAnswerSdp,
 		createPeerConnection,
+		handleNegotiation: negotiation,
 		registerIce,
-		registerLocalSdp,
-		registerOwnerTrack,
 		registerRemoteSdp,
 	} = peerConnectionManager({ client });
 
-	const { handleAnswer, handleIce, handleOffer, handleTrack } = subscribeHandler({
+	const { handleAnswer, handleIce, handleNegotiation, handleParticipant } = subscribeHandler({
 		closePeerConnection,
-		createAnswerSdp,
 		createPeerConnection,
+		negotiation,
 		registerIce,
-		registerLocalSdp,
-		registerOwnerTrack,
 		registerRemoteSdp,
 	});
 
 	client.on('message', (data, isBinary) => {
 		const rawData = getRawData(data, isBinary);
 		const { path, payload } = JSON.parse(rawData);
-		if (path === 'OFFER') {
-			handleOffer(client, payload);
+
+		if (path === 'PARTICIPANT') {
+			handleParticipant(payload);
 			return;
 		}
 
@@ -53,9 +50,9 @@ export const initClient = () => {
 			return;
 		}
 
-		if (path === 'TRACK') {
-			console.log('getTrackInfo');
-			handleTrack(payload);
+		if (path === 'NEGOTIATION') {
+			handleNegotiation(payload);
+			return;
 		}
 	});
 

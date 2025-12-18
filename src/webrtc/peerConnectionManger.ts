@@ -3,18 +3,14 @@ import WebSocket from 'ws';
 
 import { signalSender } from '../signaling/signerSender.js';
 import {
-	addParticipant,
 	addPeerConnection,
-	deletePendingTrack,
 	getPeerConnection,
-	getPendingTrack,
+	getUserTrackInfo,
 	removeParticipant,
 	removePeerConnection,
-	removeUserMedia,
-	setPendingTrack,
+	removeUserTrackInfo,
 	updatePeerConnection,
 } from '../store/index.js';
-import { PendingTrackEntry } from '../type/media.js';
 import {
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
@@ -31,7 +27,7 @@ interface PeerConnectionManagerProps {
 }
 
 export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) => {
-	const { negotiation, registerOtherTracks, registerOwnerTrack } = mediaManager({
+	const { handleNegotiation, handleTrack, registerOtherTracks } = mediaManager({
 		client,
 	});
 
@@ -39,19 +35,10 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		let negotiationTimer: NodeJS.Timeout | null = null;
 
 		const { sendIce } = signalSender({ client });
-		const connection = await getPeerConnection(userId);
-
-		if (connection) {
-			return connection.pc;
-		}
 
 		const pc: RTCPeerConnection = new wrtc.RTCPeerConnection({
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
-
-		await registerOtherTracks(userId, roomId, pc);
-
-		await addParticipant(roomId, userId);
 
 		pc.onicecandidate = async (e: RTCPeerConnectionIceEvent) => {
 			const data = await getPeerConnection(userId);
@@ -69,21 +56,6 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 			sendIce(payload);
 		};
 
-		pc.ontrack = async (e: RTCTrackEvent) => {
-			console.log('onTrack');
-			const mid = e.transceiver.mid as string;
-			const entry = (await getPendingTrack(userId, e.track.id)) as PendingTrackEntry | undefined;
-
-			if (!entry || !entry.streamType || !entry.userId) {
-				await setPendingTrack(userId, mid, {
-					track: e.track,
-				});
-				return;
-			}
-			await deletePendingTrack(userId, mid);
-			await registerOwnerTrack(userId, roomId, e.track, entry.streamType);
-		};
-
 		pc.onnegotiationneeded = async () => {
 			if (pc.signalingState !== 'stable') {
 				return;
@@ -97,10 +69,26 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 				negotiationTimer = null;
 				console.log('negotiation ', userId);
 
-				await negotiation(userId);
+				await handleNegotiation(userId);
 			}, 100);
 		};
 
+		pc.ontrack = async (e) => {
+			const mid = e.transceiver.mid;
+			if (!mid) {
+				return;
+			}
+			const trackInfo = await getUserTrackInfo(userId, mid);
+			console.log(trackInfo, e.track.readyState, e.track.enabled, e.track.muted);
+			handleTrack(userId, roomId, e);
+		};
+
+		pc.addTransceiver('audio', { direction: 'recvonly' });
+		pc.addTransceiver('video', { direction: 'recvonly' });
+		pc.addTransceiver('audio', { direction: 'recvonly' });
+		pc.addTransceiver('video', { direction: 'recvonly' });
+
+		await registerOtherTracks(userId, roomId, pc);
 		await addPeerConnection(userId, pc);
 		return pc;
 	};
@@ -173,16 +161,16 @@ export const peerConnectionManager = ({ client }: PeerConnectionManagerProps) =>
 		data?.pc?.close();
 		await removePeerConnection(id);
 		await removeParticipant(roomId, id);
-		await removeUserMedia(id);
+		await removeUserTrackInfo(id);
 	};
 	return {
 		closePeerConnection,
 		createAnswerSdp,
 		createOfferSdp,
 		createPeerConnection,
+		handleNegotiation,
 		registerIce,
 		registerLocalSdp,
-		registerOwnerTrack,
 		registerRemoteSdp,
 	};
 };
