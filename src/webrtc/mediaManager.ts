@@ -1,80 +1,92 @@
-import { Client } from '@stomp/stompjs';
+import WebSocket from 'ws';
 
 import { signalSender } from '../signaling/signerSender.js';
 import {
+	deleteTransceiver,
 	getParticipant,
 	getPeerConnection,
-	getUserMedia,
-	isScreenTrackId,
-	removeScreenTrackId,
-	removeUserTrack,
+	getTransceiver,
+	getUserTrackInfo,
+	removeUserTrackInfo,
+	setTransceiver,
 	updatePeerConnection,
-	updateUserMedia,
 } from '../store/index.js';
-import { OfferPayloadType } from '../type/signal.js';
+import { TrackType } from '../type/media.js';
+import { DeviceTransceiverType } from '../type/peerConnection.js';
+import { OfferPayloadType, TrackInfoType } from '../type/signal.js';
 
 interface MediaManagerProps {
-	client: Client;
+	client: WebSocket;
 }
 export const mediaManager = ({ client }: MediaManagerProps) => {
-	const negotiation = async (userId: string) => {
+	const handleNegotiation = async (userId: string) => {
 		const { sendOffer } = signalSender({ client });
 		const data = await getPeerConnection(userId);
-		if (!data || data.makingOffer || data.pc.signalingState !== 'stable') {
+		if (!data || data.makingOffer) {
 			return;
 		}
 
-		await updatePeerConnection(userId, { makingOffer: true });
+		await updatePeerConnection(userId, { makingOffer: true, remoteSet: false });
 		const { pc } = data;
 		const offerSdp = await pc.createOffer();
 		await pc.setLocalDescription(offerSdp);
+		console.log('register offer');
+
+		const transceiver = (await getTransceiver(userId)) as Map<string, DeviceTransceiverType>;
+
+		const transceivers = Array.from(transceiver.entries()).flatMap(([targetId, deviceTransceiver]) =>
+			Object.entries(deviceTransceiver)
+				.filter(([_, t]) => typeof t?.mid === 'string')
+				.map(
+					([deviceType, t]) =>
+						[
+							t?.mid,
+							{
+								trackType: deviceType,
+								userId: targetId,
+							},
+						] as [string, TrackInfoType],
+				),
+		);
+		const trackInfo = Object.fromEntries(transceivers);
 		const payload: OfferPayloadType = {
 			sdp: JSON.stringify(offerSdp),
+			trackInfo,
 			userId,
 		};
 		sendOffer(payload);
+		await deleteTransceiver(userId);
 	};
 
-	const registerOtherTracks = async (userId: string, roomId: string, pc: RTCPeerConnection) => {
-		const participant = await getParticipant(roomId);
+	const addTransceiver = async (
+		pc: RTCPeerConnection,
+		track: MediaStreamTrack,
+		fromUserId: string,
+		toUserId: string,
+		trackType: TrackType,
+	) => {
+		console.log('addOtherTrack');
+		const transceiver = pc.addTransceiver(track.kind, { direction: 'sendonly' });
+		await transceiver.sender.replaceTrack(track);
+		await setTransceiver(toUserId, fromUserId, { [trackType]: transceiver });
+	};
 
-		if (!participant || participant.size === 0) {
+	const handleTrack = async (userId: string, roomId: string, e: RTCTrackEvent) => {
+		const track = e.track;
+		const mid = e.transceiver.mid;
+		if (!track || track?.readyState !== 'live' || !mid) {
 			return;
 		}
 
-		await Promise.all(
-			Array.from(participant).map(async (user) => {
-				if (userId === user) {
-					return;
-				}
-				const { audioTrack, mediaStream, screenAudioTrack, screenVideoTrack, videoTrack } = await getUserMedia(user);
-				if (!mediaStream) {
-					return;
-				}
-				if (audioTrack) {
-					console.log('add audioTrack');
-					pc.addTrack(audioTrack, mediaStream);
-				}
+		const trackInfo = (await getUserTrackInfo(userId, mid)) as TrackInfoType;
 
-				if (videoTrack) {
-					console.log('add videoTrack');
-					pc.addTrack(videoTrack, mediaStream);
-				}
+		if (!trackInfo) {
+			return;
+		}
 
-				if (screenAudioTrack) {
-					pc.addTrack(screenAudioTrack, mediaStream);
-				}
-
-				if (screenVideoTrack) {
-					pc.addTrack(screenVideoTrack, mediaStream);
-				}
-			}),
-		);
-	};
-
-	const registerOwnerTrack = async (id: string, roomId: string, event: RTCTrackEvent) => {
-		const streamType = (await isScreenTrackId(event.track.id)) ? 'SCREEN' : 'USER';
-		await updateUserMedia(id, streamType, event.track, event.streams[0]);
+		track.onended = async () => {
+			removeUserTrackInfo(userId, mid);
+		};
 
 		const participant = await getParticipant(roomId);
 
@@ -83,30 +95,44 @@ export const mediaManager = ({ client }: MediaManagerProps) => {
 		}
 
 		await Promise.all(
-			Array.from(participant).map(async (userId) => {
-				if (userId === id) {
+			Array.from(participant).map(async (user) => {
+				if (userId === user) {
 					return;
 				}
 
-				const pc = await getPeerConnection(userId);
+				const pc = await getPeerConnection(user);
 				if (!pc) {
 					return;
 				}
 
-				const senderExists = pc.pc.getSenders().some((s) => s.track?.id === event.track.id);
-				if (!senderExists) pc.pc.addTrack(event.track, event.streams[0]);
-
-				/* send signal(trackId: userId ) */
+				addTransceiver(pc.pc, track, userId, user, trackInfo.trackType);
 			}),
 		);
-
-		event.track.onended = async () => {
-			removeUserTrack(id, streamType, event.track.kind);
-			if (streamType === 'SCREEN') {
-				await removeScreenTrackId(event.track.id);
-			}
-		};
 	};
 
-	return { negotiation, registerOtherTracks, registerOwnerTrack };
+	const registerOtherTracks = async (userId: string, roomId: string, pc: RTCPeerConnection) => {
+		const participant = await getParticipant(roomId);
+		if (!participant || participant.size === 0) return;
+
+		await Promise.all(
+			Array.from(participant).map(async (user) => {
+				if (userId === user) return;
+
+				const tracks = (await getUserTrackInfo(user)) as Map<string, TrackInfoType>;
+				const participantPc = await getPeerConnection(user);
+				if (!participantPc) return;
+
+				for (const [mid, trackInfo] of tracks) {
+					const transceiver = participantPc.pc.getTransceivers().find((t) => t.mid === mid);
+
+					const track = transceiver?.receiver.track;
+					if (!track || track.readyState !== 'live') continue;
+
+					await addTransceiver(pc, track, user, userId, trackInfo.trackType);
+				}
+			}),
+		);
+	};
+
+	return { handleNegotiation, handleTrack, registerOtherTracks };
 };

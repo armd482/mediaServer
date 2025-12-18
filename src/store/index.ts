@@ -1,18 +1,11 @@
 import { createMutex } from '../lib/roomMutex.js';
-import { StreamType } from '../type/media.js';
-import { ServerPeerConnectionData } from '../type/peerConnection.js';
+import { TrackInfoType } from '../type/media.js';
+import { DeviceTransceiverType, ServerPeerConnectionData } from '../type/peerConnection.js';
 
 import { getParticipants, addParticipants, removeParticipants } from './participantStore.js';
 import { addPeer, removePeer, getPeer, updatePeer } from './peerConnectionStore.js';
-import {
-	getMedia,
-	updateMedia,
-	removeMedia,
-	isScreenTrack,
-	addScreenTrack,
-	removeScreenTrack,
-	removeTrack,
-} from './trackStore.js';
+import { getUserTrackInfoStore, updateUserTrackInfoStore, removeTrackInfoStore } from './trackStore.js';
+import { deleteTransceiverStore, getTransceiverStore, setTransceiverStore } from './transceiverStore.js';
 
 export const { runExclusive } = createMutex();
 
@@ -29,17 +22,16 @@ export const removePeerConnection = (userId: string) => runExclusive(async () =>
 export const updatePeerConnection = (userId: string, data: Partial<ServerPeerConnectionData>) =>
 	runExclusive(async () => updatePeer(userId, data));
 
-export const getUserMedia = (userId: string) => runExclusive(async () => getMedia(userId));
-export const updateUserMedia = (
-	userId: string,
-	streamType: StreamType,
-	track: MediaStreamTrack,
-	mediaStream?: MediaStream,
-) => runExclusive(async () => updateMedia(userId, streamType, track, mediaStream));
-export const removeUserTrack = (userId: string, streamType: StreamType, trackKind: string) =>
-	runExclusive(async () => removeTrack(userId, streamType, trackKind));
-export const removeUserMedia = (userId: string) => runExclusive(async () => removeMedia(userId));
+export const getUserTrackInfo = (userId: string, mid?: string) =>
+	runExclusive(async () => getUserTrackInfoStore(userId, mid));
+export const updateUserTrackInfo = (userId: string, mid: string, value: TrackInfoType) =>
+	runExclusive(async () => updateUserTrackInfoStore(userId, mid, value));
+export const removeUserTrackInfo = (userId: string, mid?: string) =>
+	runExclusive(async () => removeTrackInfoStore(userId, mid));
 
-export const isScreenTrackId = (id: string) => runExclusive(async () => isScreenTrack(id));
-export const addScreenTrackId = (id: string) => runExclusive(async () => addScreenTrack(id));
-export const removeScreenTrackId = (id: string) => runExclusive(async () => removeScreenTrack(id));
+export const getTransceiver = async (toUserId: string, fromUserId?: string) =>
+	runExclusive(async () => getTransceiverStore(toUserId, fromUserId));
+export const setTransceiver = async (toUserId: string, fromUserId: string, value: Partial<DeviceTransceiverType>) =>
+	runExclusive(async () => setTransceiverStore(toUserId, fromUserId, value));
+export const deleteTransceiver = async (toUserId: string, fromUserId?: string) =>
+	runExclusive(async () => deleteTransceiverStore(toUserId, fromUserId));

@@ -1,117 +1,101 @@
-import { Client, IMessage } from '@stomp/stompjs';
+import WebSocket from 'ws';
 
-import { addScreenTrackId, getPeerConnection, updatePeerConnection } from '../store/index.js';
+import { addParticipant, getPeerConnection, updatePeerConnection, updateUserTrackInfo } from '../store/index.js';
 import {
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
-	CreateSdpProps,
 	RegisterIceProps,
-	RegisterLocalSdpProps,
 	RegisterRemoteSdpProps,
 } from '../type/peerConnection.js';
 import {
+	ParticipantResponseType,
 	AnswerResponseType,
-	IcePayloadType,
 	IceResponseType,
 	LeaveResponseType,
-	OfferResponseType,
-	ScreenTrackResponseType,
+	NegotiationResponseType,
+	IcePayloadType,
 } from '../type/signal.js';
 
 import { signalSender } from './signerSender.js';
 
 interface SignalHandlerProps {
-	createPeerConnection: (props: CreatePeerConnectionProps) => Promise<RTCPeerConnection>;
-	createAnswerSdp: (props: CreateSdpProps) => Promise<RTCSessionDescriptionInit | undefined>;
-	registerLocalSdp: (props: RegisterLocalSdpProps) => Promise<void>;
-	registerRemoteSdp: (props: RegisterRemoteSdpProps) => Promise<void>;
-	registerIce: (props: RegisterIceProps) => Promise<void>;
 	closePeerConnection: (props: ClosePeerConnectionProps) => Promise<void>;
+	createPeerConnection: (props: CreatePeerConnectionProps) => Promise<RTCPeerConnection>;
+	negotiation: (userId: string) => Promise<void>;
+	registerIce: (props: RegisterIceProps) => Promise<void>;
+	registerRemoteSdp: (props: RegisterRemoteSdpProps) => Promise<void>;
 }
 
 export const subscribeHandler = ({
 	closePeerConnection,
-	createAnswerSdp,
 	createPeerConnection,
+	negotiation,
 	registerIce,
-	registerLocalSdp,
 	registerRemoteSdp,
 }: SignalHandlerProps) => {
-	const parseMessage = <T>(message: IMessage) => {
-		const response = JSON.parse(message.body) as T;
-		return response;
-	};
-
-	const sendIceQueue = async (userId: string, client: Client) => {
-		const { sendIce } = signalSender({ client });
-		const data = await getPeerConnection(userId);
-		if (data) {
-			await updatePeerConnection(userId, { remoteSet: true });
-			const { iceQueue } = data;
-			iceQueue.forEach((ice) => {
-				const payload: IcePayloadType = {
-					ice: JSON.stringify(ice),
-					userId,
-				};
-				sendIce(payload);
-			});
-			await updatePeerConnection(userId, { iceQueue: [] });
-		}
-	};
-
-	const handleOffer = async (client: Client, message: IMessage) => {
-		const { sendAnswer } = signalSender({ client });
-		const response = parseMessage<OfferResponseType>(message);
-		const { roomId, sdp: remoteSdp, userId } = response;
-		const parsedRemoteSdp = JSON.parse(remoteSdp) as RTCSessionDescriptionInit;
+	const handleParticipant = async (response: ParticipantResponseType) => {
+		const { roomId, userId } = response;
 
 		await createPeerConnection({
 			roomId,
 			userId,
 		});
 
+		await addParticipant(roomId, userId);
+	};
+
+	const handleAnswer = async (client: WebSocket, response: AnswerResponseType) => {
+		console.log('getAnswer');
+		const { sdp, trackInfo, userId } = response;
+		Object.entries(trackInfo).forEach((value) => console.log(value));
+		const parsedRemoteSdp = JSON.parse(sdp) as RTCSessionDescriptionInit;
+		await Promise.all(
+			Object.entries(trackInfo).map(async ([mid, track]) => {
+				console.log(mid, track);
+				await updateUserTrackInfo(userId, mid, track);
+			}),
+		);
+
 		await registerRemoteSdp({ sdp: parsedRemoteSdp, userId });
-		const answerSdp = await createAnswerSdp({ userId });
-		if (!answerSdp) {
+		const data = await getPeerConnection(userId);
+		if (!data) {
 			return;
 		}
-		await sendIceQueue(userId, client);
-		sendAnswer({ sdp: JSON.stringify(answerSdp), userId });
 
-		await registerLocalSdp({ sdp: answerSdp, userId });
-		await updatePeerConnection(userId, { makingOffer: false });
+		await updatePeerConnection(userId, { iceQueue: [], makingOffer: false, remoteSet: true });
+
+		const { sendIce } = signalSender({ client });
+
+		data.iceQueue.forEach((ice) => {
+			const payload: IcePayloadType = {
+				ice: JSON.stringify(ice),
+				userId,
+			};
+			sendIce(payload);
+		});
 	};
 
-	const handleAnswer = async (client: Client, message: IMessage) => {
-		const { sdp, userId } = parseMessage<AnswerResponseType>(message);
-		const parsedRemoteSdp = JSON.parse(sdp) as RTCSessionDescriptionInit;
-		await registerRemoteSdp({ sdp: parsedRemoteSdp, userId });
-		await sendIceQueue(userId, client);
-	};
-
-	const handleIce = async (message: IMessage) => {
-		const { ice, userId } = parseMessage<IceResponseType>(message);
+	const handleIce = async (response: IceResponseType) => {
+		const { ice, userId } = response;
 		const parsedIce = JSON.parse(ice) as RTCIceCandidateInit;
 		await registerIce({ ice: parsedIce, userId });
 	};
 
-	const handleScreenTrack = async (client: Client, message: IMessage) => {
-		const { sendScreenTrack } = signalSender({ client });
-		const { id, trackId } = parseMessage<ScreenTrackResponseType>(message);
-		await addScreenTrackId(trackId);
-		sendScreenTrack({ id, trackId });
+	const handleLeave = async (response: LeaveResponseType) => {
+		const { id, roomId } = response;
+		await closePeerConnection({ id, roomId });
 	};
 
-	const handleClosePeerConnection = async (message: IMessage) => {
-		const { id, roomId } = parseMessage<LeaveResponseType>(message);
-		await closePeerConnection({ id, roomId });
+	const handleNegotiation = async (response: NegotiationResponseType) => {
+		const { userId } = response;
+		await negotiation(userId);
 	};
 
 	return {
 		handleAnswer,
-		handleClosePeerConnection,
 		handleIce,
-		handleOffer,
-		handleScreenTrack,
+		handleLeave,
+		handleNegotiation,
+		handleParticipant,
 	};
 };

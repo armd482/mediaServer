@@ -1,17 +1,9 @@
 export type ParticipantType = Set<string>;
 export type StreamType = 'SCREEN' | 'USER';
+export type TrackType = 'audio' | 'video' | 'screenAudio' | 'screenVideo';
 
-export interface TrackType {
-	audioTrack: MediaStreamTrack | null;
-	videoTrack: MediaStreamTrack | null;
-	screenAudioTrack: MediaStreamTrack | null;
-	screenVideoTrack: MediaStreamTrack | null;
-	mediaStream: MediaStream | null;
+export interface TrackInfoType {
+	mid?: string;
+	userId?: string;
+	streamType?: StreamType;
 }
-
-export interface TransceiverMidType {
-	id: string;
-	type: StreamType;
-}
-
-export type TransceiverType = Record<'audio' | 'video' | 'screenAudio' | 'screenVideo', RTCRtpTransceiver | null>;
