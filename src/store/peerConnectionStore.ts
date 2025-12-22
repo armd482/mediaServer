@@ -1,4 +1,4 @@
-import { ServerPeerConnectionData } from '../type/peerConnection.js';
+import { ServerPeerConnectionData } from '@/type/peerConnection.js';
 
 const peerConnectionsStore = new Map<string, ServerPeerConnectionData>();
 
@@ -6,6 +6,7 @@ export const addPeer = (userId: string, pc: RTCPeerConnection) => {
 	peerConnectionsStore.set(userId, {
 		iceQueue: [],
 		makingOffer: false,
+		negotiationTimer: null,
 		pc,
 		remoteSet: false,
 	});

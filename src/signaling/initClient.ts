@@ -1,8 +1,8 @@
 import WebSocket, { RawData } from 'ws';
 
-import { peerConnectionManager } from '../webrtc/peerConnectionManger.js';
-
 import { subscribeHandler } from './subscriptionHandler.js';
+
+import { peerConnectionManager } from '@/webrtc/peerConnectionManger.js';
 
 export const initClient = () => {
 	const client = new WebSocket('ws://localhost:8080/ws?userId=mediaServer');
@@ -15,20 +15,14 @@ export const initClient = () => {
 		return data.toString();
 	};
 
-	const {
-		closePeerConnection,
-		createPeerConnection,
-		handleNegotiation: negotiation,
-		registerIce,
-		registerRemoteSdp,
-	} = peerConnectionManager({ client });
+	const { closePeerConnection, createPeerConnection, handleNegotiation, registerAnswerSdp, registerRemoteIce } =
+		peerConnectionManager({ client });
 
-	const { handleAnswer, handleIce, handleNegotiation, handleParticipant } = subscribeHandler({
+	const { handleAnswer, handleIce, handleParticipant } = subscribeHandler({
 		closePeerConnection,
 		createPeerConnection,
-		negotiation,
-		registerIce,
-		registerRemoteSdp,
+		registerAnswerSdp,
+		registerRemoteIce,
 	});
 
 	client.on('message', (data, isBinary) => {
@@ -51,7 +45,7 @@ export const initClient = () => {
 		}
 
 		if (path === 'NEGOTIATION') {
-			handleNegotiation(payload);
+			handleNegotiation(payload.userId);
 			return;
 		}
 	});

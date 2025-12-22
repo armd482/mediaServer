@@ -61,6 +61,6 @@ export interface TrackPayloadType {
 }
 
 export interface LeaveResponseType {
-	id: string;
+	userId: string;
 	roomId: string;
 }

@@ -3,6 +3,7 @@ export interface ServerPeerConnectionData {
 	remoteSet: boolean;
 	iceQueue: RTCIceCandidateInit[];
 	makingOffer: boolean;
+	negotiationTimer: null | NodeJS.Timeout;
 }
 
 export type PeerConnectionType = Record<string, RTCPeerConnection>;
@@ -35,7 +36,7 @@ export interface RegisterIceProps extends PeerConnectionInit {
 }
 
 export interface ClosePeerConnectionProps {
-	id: string;
+	userId: string;
 	roomId: string;
 }
 

@@ -1,5 +1,3 @@
-import { initClient } from './signaling/initClient.js';
-
-console.log('openning server');
+import { initClient } from '@/signaling/initClient.js';
 
 initClient();

@@ -1,4 +1,4 @@
-import { DeviceTransceiverType } from '../type/peerConnection.js';
+import { DeviceTransceiverType } from '@/type/peerConnection.js';
 
 const trasnceiversStore = new Map<string, Map<string, DeviceTransceiverType>>(); //to -> from
 
