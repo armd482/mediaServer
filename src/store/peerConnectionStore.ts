@@ -6,6 +6,7 @@ export const addPeer = (userId: string, pc: RTCPeerConnection) => {
 	peerConnectionsStore.set(userId, {
 		iceQueue: [],
 		makingOffer: false,
+		negotiationTimer: null,
 		pc,
 		remoteSet: false,
 	});

@@ -5,5 +5,5 @@ export type TrackType = 'audio' | 'video' | 'screenAudio' | 'screenVideo';
 export interface TrackInfoType {
 	mid?: string;
 	userId?: string;
-	streamType?: StreamType;
+	trackType?: TrackType;
 }
