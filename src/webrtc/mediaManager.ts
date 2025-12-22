@@ -5,10 +5,10 @@ import {
 	getTransceiver,
 	getUserTrackInfo,
 	setTransceiver,
-} from '../store/index.js';
-import { TrackType } from '../type/media.js';
-import { DeviceTransceiverType } from '../type/peerConnection.js';
-import { TrackInfoType } from '../type/signal.js';
+} from '@/store/index.js';
+import { TrackType } from '@/type/media.js';
+import { DeviceTransceiverType } from '@/type/peerConnection.js';
+import { TrackInfoType } from '@/type/signal.js';
 
 export const mediaManager = () => {
 	const getUserTransceiverTrackInfo = async (userId: string) => {

@@ -1,11 +1,11 @@
-import { createMutex } from '../lib/roomMutex.js';
-import { TrackInfoType } from '../type/media.js';
-import { DeviceTransceiverType, ServerPeerConnectionData } from '../type/peerConnection.js';
-
 import { getParticipants, addParticipants, removeParticipants } from './participantStore.js';
 import { addPeer, removePeer, getPeer, updatePeer } from './peerConnectionStore.js';
 import { getUserTrackInfoStore, updateUserTrackInfoStore, removeTrackInfoStore } from './trackStore.js';
 import { deleteTransceiverStore, getTransceiverStore, setTransceiverStore } from './transceiverStore.js';
+
+import { createMutex } from '@/lib/roomMutex.js';
+import { TrackInfoType } from '@/type/media.js';
+import { DeviceTransceiverType, ServerPeerConnectionData } from '@/type/peerConnection.js';
 
 export const { runExclusive } = createMutex();
 

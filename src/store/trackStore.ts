@@ -1,4 +1,4 @@
-import { TrackInfoType } from '../type/media.js';
+import { TrackInfoType } from '@/type/media.js';
 
 const userTrackInfoStore = new Map<string, Map<string, TrackInfoType>>(); //key: userId, innerKey: mid
 

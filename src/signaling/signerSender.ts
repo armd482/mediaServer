@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 
-import { AnswerPayloadType, IcePayloadType, OfferPayloadType, TrackPayloadType } from '../type/signal.js';
+import { AnswerPayloadType, IcePayloadType, OfferPayloadType, TrackPayloadType } from '@/type/signal.js';
 
 interface SignalSenderProps {
 	client: WebSocket;

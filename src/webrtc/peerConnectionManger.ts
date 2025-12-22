@@ -1,7 +1,16 @@
 import wrtc from 'wrtc';
 import WebSocket from 'ws';
 
-import { signalSender } from '../signaling/signerSender.js';
+import {
+	ClosePeerConnectionProps,
+	CreatePeerConnectionProps,
+	RegisterIceProps,
+	RegisterRemoteSdpProps,
+} from '../type/peerConnection.js';
+
+import { mediaManager } from './mediaManager.js';
+
+import { signalSender } from '@/signaling/signerSender.js';
 import {
 	addPeerConnection,
 	getParticipant,
@@ -11,17 +20,9 @@ import {
 	removePeerConnection,
 	removeUserTrackInfo,
 	updatePeerConnection,
-} from '../store/index.js';
-import { TrackInfoType, TrackType } from '../type/media.js';
-import {
-	ClosePeerConnectionProps,
-	CreatePeerConnectionProps,
-	RegisterIceProps,
-	RegisterRemoteSdpProps,
-} from '../type/peerConnection.js';
-import { OfferPayloadType } from '../type/signal.js';
-
-import { mediaManager } from './mediaManager.js';
+} from '@/store/index.js';
+import { TrackInfoType, TrackType } from '@/type/media.js';
+import { OfferPayloadType } from '@/type/signal.js';
 
 interface PeerConnectionManagerProps {
 	client: WebSocket;

@@ -1,21 +1,20 @@
 import WebSocket from 'ws';
 
-import { addParticipant, getPeerConnection, updatePeerConnection, updateUserTrackInfo } from '../store/index.js';
+import { signalSender } from '@/signaling/signerSender.js';
+import { addParticipant, getPeerConnection, updatePeerConnection, updateUserTrackInfo } from '@/store/index.js';
 import {
 	ClosePeerConnectionProps,
 	CreatePeerConnectionProps,
 	RegisterIceProps,
 	RegisterRemoteSdpProps,
-} from '../type/peerConnection.js';
+} from '@/type/peerConnection.js';
 import {
 	ParticipantResponseType,
 	AnswerResponseType,
 	IceResponseType,
 	LeaveResponseType,
 	IcePayloadType,
-} from '../type/signal.js';
-
-import { signalSender } from './signerSender.js';
+} from '@/type/signal.js';
 
 interface SignalHandlerProps {
 	closePeerConnection: (props: ClosePeerConnectionProps) => Promise<void>;

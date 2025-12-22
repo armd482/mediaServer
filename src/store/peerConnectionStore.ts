@@ -1,4 +1,4 @@
-import { ServerPeerConnectionData } from '../type/peerConnection.js';
+import { ServerPeerConnectionData } from '@/type/peerConnection.js';
 
 const peerConnectionsStore = new Map<string, ServerPeerConnectionData>();
 

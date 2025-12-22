@@ -1,8 +1,8 @@
 import WebSocket, { RawData } from 'ws';
 
-import { peerConnectionManager } from '../webrtc/peerConnectionManger.js';
-
 import { subscribeHandler } from './subscriptionHandler.js';
+
+import { peerConnectionManager } from '@/webrtc/peerConnectionManger.js';
 
 export const initClient = () => {
 	const client = new WebSocket('ws://localhost:8080/ws?userId=mediaServer');

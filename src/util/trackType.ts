@@ -1,4 +1,4 @@
-import { StreamType } from '../type/media.js';
+import { StreamType } from '@/type/media.js';
 
 export const getTrackType = (streamType: StreamType, trackKind: string) => {
 	if (streamType === 'USER') {
